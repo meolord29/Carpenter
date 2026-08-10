@@ -33,24 +33,20 @@ The agent decides what to teach; carpenter keeps score.
 
 ## Agent-driven, not manual
 
-carpenter is a CLI, but it's built to be driven by an LLM agent — not typed by
-hand. The interface reflects this:
+You don't drive carpenter — your AI agent does. Tell it what you want to learn;
+it does the rest.
 
-- **One JSON envelope per command.** Every invocation prints exactly one
-  structured envelope on stdout and exits 0/1 — parseable, never an interactive
-  prompt (an agent can't answer one). Destructive ops take `--force`, not a y/n.
-- **JSON specs in, JSON out.** Authoring input (`--spec <file>|-`) and every
-  status payload are JSON — large and exact, the shape an agent generates and
-  reads, not something you'd hand-type.
-- **Defined human-in-the-loop gates.** The agent orchestrates, but approval stays
-  yours: `plan create` returns a draft you must `plan confirm`; the skill enforces
-  a content walkthrough before any `lesson create`.
-- **Deterministic backend, LLM tutor.** carpenter never calls a model — it's
-  storage, rendering, and execution; the agent (the tutor) decides what to teach.
+But you stay in control. Before a single lesson gets built, the agent walks you
+through the plan — what each lesson covers, the practice problems, the quizzes —
+and waits for your OK. Nothing gets generated behind your back.
 
-A human *can* run it directly — it has a `--help` and a `howto` manual — but the
-intended operator is an agent. The only agent app currently supported is
-[opencode](https://opencode.ai); see [Install](#install) to wire it up.
+And it's trustworthy by design: **the agent teaches, but carpenter grades.** The
+agent never touches the scoring, so a pass is a real pass — not the AI being nice
+to you.
+
+Works with [opencode](https://opencode.ai) today; see [Install](#install). You
+can run it by hand too (`carpenter howto` prints the full manual) — it's just
+built for an agent to drive.
 
 ## How it works
 
