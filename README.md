@@ -98,39 +98,24 @@ the registered skill if present).
 
 ## Quickstart
 
-**Prerequisites:** [carpenter installed](#install) and [`uv`](https://github.com/astral-sh/uv)
-on `PATH`. Learner execution needs `uv` (venv + `nbconvert`); `helper.py` itself is
-Python stdlib-only.
+**Prerequisites:** [carpenter installed](#install) (the install step registered the
+skill for you) and [`uv`](https://github.com/astral-sh/uv) on `PATH`. From here you
+don't touch the CLI — the agent does.
 
-```sh
-# create a course from a spec on stdin
-carpenter course create --spec - <<'EOF'
-{ "title": "Data Structures", "slug": "data-structures",
-  "goal": "Understand core data structures from the ground up",
-  "description": "Arrays, lists, hashing, trees." }
-EOF
+1. Open [opencode](https://opencode.ai). The `carpenter` skill is already loaded.
+2. Tell it what you want to learn — in plain words:
 
-carpenter course switch data-structures
+   > "I want to get solid at recursion."
+   > "Build me a short course on NumPy fundamentals."
 
-# author a lesson (renders lesson.ipynb + helper.py)
-#   spec shape: docs/examples/lesson/create.md
-carpenter -c data-structures lesson create --spec lesson.json
+3. The agent drafts an outline and walks you through it — lessons, practice problems,
+   quizzes. **Approve it**, and it builds the notebooks: teaching, practice stubs, and
+   a live grader.
+4. Fill in a practice stub, hit **Run** → instant **PASS / FAIL**. That's the loop.
+5. Stuck or wondering how you're doing? Just ask the agent — it pulls your live
+   progress and points out where you're weak.
 
-# set up the course venv, then run every quiz in the lesson notebook
-carpenter -c data-structures venv create --python 3.12
-carpenter -c data-structures quiz run arrays-101
-
-# live progress
-carpenter -c data-structures progress summary
-```
-
-Every command returns one envelope on stdout, e.g.:
-```json
-{"status":"ok","message":"quizzes run: arrays-101","data":{"lesson_id":"arrays-101","quizzes":[{"quiz_id":"q1","passed":1,"total":1}],"saved":true}}
-```
-
-Run `carpenter howto` for the full, always-current command manual (one worked
-example per command).
+That's it: you describe what you want to practice; the agent drives carpenter.
 
 ## Commands
 
