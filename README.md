@@ -1,0 +1,242 @@
+# carpenter
+
+Agent-driven CLI that builds Python/Jupyter learning material.
+
+**carpenter** is a single Rust binary an LLM agent drives to author, render, and
+score Python/Jupyter courses. SQLite is the source of truth; notebooks are
+*rendered* from it. There is no embedded LLM — an external agent
+([opencode](https://opencode.ai)) is the tutor; carpenter is deterministic
+storage, rendering, and execution.
+
+> **Status:** experimental / early. `v0.1.0` — all core build phases have landed;
+> no stability guarantees yet.
+
+## Agent-driven, not manual
+
+carpenter is a CLI, but it's built to be driven by an LLM agent — not typed by
+hand. The interface reflects this:
+
+- **One JSON envelope per command.** Every invocation prints exactly one
+  structured envelope on stdout and exits 0/1 — parseable, never an interactive
+  prompt (an agent can't answer one). Destructive ops take `--force`, not a y/n.
+- **JSON specs in, JSON out.** Authoring input (`--spec <file>|-`) and every
+  status payload are JSON — large and exact, the shape an agent generates and
+  reads, not something you'd hand-type.
+- **Defined human-in-the-loop gates.** The agent orchestrates, but approval stays
+  yours: `plan create` returns a draft you must `plan confirm`; the skill enforces
+  a content walkthrough before any `lesson create`.
+- **Deterministic backend, LLM tutor.** carpenter never calls a model — it's
+  storage, rendering, and execution; the agent (the tutor) decides what to teach.
+
+A human *can* run it directly — it has a `--help` and a `howto` manual — but the
+intended operator is an agent. The only agent app currently supported is
+[opencode](https://opencode.ai); see [Install](#install) to wire it up.
+
+## Design pillars
+
+- **DB is the source of truth.** One `course.db` per course; notebooks are
+  generated, never parsed back into rows ([ADR-002](docs/adr/002-db-source-of-truth.md)).
+- **Render, don't hand-edit.** Every managed notebook cell is tagged
+  `metadata.managed` and regenerated from the DB via `lesson sync`. Learner-filled
+  stubs and learner-authored cells are preserved (3-way via `scaffold_hash`).
+- **Agent owns the DB; learner owns stubs.** carpenter writes the rows + scaffold;
+  the learner fills the function bodies; a verification-only `helper.py` scores them
+  and writes `pass_or_fail` back — it never prints the `expected` value.
+- **Compile-enforced self-documentation.** `#![deny(missing_docs)]` + a `build.rs`
+  `syn` scan fail the build if a command lacks a `///` example block or a paired
+  `#[test]` ([ADR-007](docs/adr/007-compile-enforced-command-docs.md)).
+- **Generated docs surfaces.** The `howto` manual is scraped from `clap`; spec
+  tables are generated from serde types. Drift is caught inside `cargo test`.
+- **One envelope per command.** Each command prints exactly one JSON envelope on
+  stdout (`status`/`message`/`data` or `status`/`message`/`code`/`details`) and
+  exits 0/1 — machine-parseable for the agent, never a TTY prompt.
+
+## Domain model
+
+```
+Course
+ ├─ Plan (course)           bullet goals -> linked lessons
+ └─ Lesson                  = one rendered notebook; ordered roadmap
+     ├─ Plan (lesson)
+     ├─ Section             teaching (markdown + code snippets -> cells)
+     │   └─ Practice        fill-in function (the "practice session")
+     │       └─ TestCase*
+     └─ Quiz                assessment function (end of notebook)
+         └─ TestCase*
+```
+
+Practice and Quiz share a `Checkable` shape (`name`, `signature`, `prompt` +
+cases) but live in separate tables. IDs are stable strings (`s1`, `p1`, `q1`,
+`c1`, …), never reused.
+
+## How it works
+
+1. `course create --spec -` → `course.json` + empty `course.db`.
+2. `plan create` (course) → draft; user approves → `plan confirm` materializes
+   goal rows + `covered_by` links.
+3. `lesson create --spec -` → DB inserts; render notebook (managed cells) + a
+   generic, verification-only `helper.py`.
+4. Learner fills a practice stub, runs the check cell → helper scores and writes
+   `pass_or_fail` / `last_check` (instant feedback).
+5. `quiz run` → `uv run jupyter nbconvert --execute` in the course venv → helper
+   cells score every quiz; scaffolding errors escalate via `scaffold_hash`,
+   learner errors are scored as fails.
+6. `progress summary` rolls up lessons / quizzes / goals / notes; lesson & goal
+   status derive bottom-up from `pass_or_fail` + `skip`.
+
+## Install
+
+From a source checkout (the canonical path — `install` copies the *running*
+binary, so build first, then run the built binary):
+
+```sh
+git clone https://github.com/meolord29/Carpenter carpenter
+cd carpenter
+cargo xtask build --release        # gen-howto + gen-specs + optimized build
+
+./target/release/carpenter install   # copy the built binary onto PATH
+carpenter register --app opencode    # write the opencode skill + permission
+```
+
+What each step does:
+
+- `cargo xtask build --release` — the canonical build: regenerates the `howto`
+  manual + spec tables, then compiles an optimized binary to
+  `target/release/carpenter`.
+- `carpenter install` — copies the *currently running* binary into `bin_dir`
+  (default `~/.local/bin`; override with `--bin-dir <path>` or set it via
+  `carpenter config set bin_dir <path>`). The envelope reports `on_path` so you
+  know whether `~/.local/bin` is on your `$PATH` (add it if not).
+- `carpenter register --app opencode` — writes
+  `~/.config/opencode/skills/carpenter/SKILL.md` (the skill embeds the generated
+  `howto` + version + binary path) and merges `permission.skill.carpenter="allow"`
+  into `~/.config/opencode/opencode.json` so it loads without prompting.
+  `claude-code` / `agents` are accepted by `--app` but not yet implemented.
+
+Verify: `carpenter --version` and `carpenter howto`. To self-update later from a
+pulled checkout: `carpenter upgrade` (rebuilds, replaces the binary, and refreshes
+the registered skill if present).
+
+## Quickstart
+
+**Prerequisites:** [carpenter installed](#install) and [`uv`](https://github.com/astral-sh/uv)
+on `PATH`. Learner execution needs `uv` (venv + `nbconvert`); `helper.py` itself is
+Python stdlib-only.
+
+```sh
+# create a course from a spec on stdin
+carpenter course create --spec - <<'EOF'
+{ "title": "Data Structures", "slug": "data-structures",
+  "goal": "Understand core data structures from the ground up",
+  "description": "Arrays, lists, hashing, trees." }
+EOF
+
+carpenter course switch data-structures
+
+# author a lesson (renders lesson.ipynb + helper.py)
+#   spec shape: docs/examples/lesson/create.md
+carpenter -c data-structures lesson create --spec lesson.json
+
+# set up the course venv, then run every quiz in the lesson notebook
+carpenter -c data-structures venv create --python 3.12
+carpenter -c data-structures quiz run arrays-101
+
+# live progress
+carpenter -c data-structures progress summary
+```
+
+Every command returns one envelope on stdout, e.g.:
+```json
+{"status":"ok","message":"quizzes run: arrays-101","data":{"lesson_id":"arrays-101","quizzes":[{"quiz_id":"q1","passed":1,"total":1}],"saved":true}}
+```
+
+Run `carpenter howto` for the full, always-current command manual (one worked
+example per command).
+
+## Commands
+
+| group | commands | purpose |
+|-------|----------|---------|
+| `course` | create list show update delete switch | course CRUD + active-course |
+| `plan` | create show list confirm update delete | human-in-the-loop goals (draft → confirm) |
+| `goal` | add list update remove | course objectives (status derives or pins) |
+| `lesson` | create get list show update delete sync execute | author + render + lifecycle + run notebook |
+| `quiz` | run list show results | end-of-lesson assessment (nbconvert) |
+| `venv` | create sync list add | uv-managed course venv |
+| `skip` | — | exclude a lesson / quiz / practice from derivation |
+| `progress` | show summary | live roll-up |
+| `notes` | add show list update resolve remove | qualitative tracker (gaps, mistakes, strengths, …) |
+| `bug` / `feature` | file list show resolve | file-backed feedback under `~/.config/carpenter/` |
+| `config` | get set | app defaults |
+| `register` / `deregister` | — | agent-app skill integration |
+| `build` / `install` / `upgrade` | — | scaffold + self-install + self-upgrade |
+| `link` | register | future CLI registry manifest |
+| `howto` | — | print the generated command manual |
+
+Exact input/output (spec JSON shapes + envelope `data`): `carpenter howto` and
+[`docs/specs/`](docs/specs/README.md). Global flags: `--version`, `--root <path>`,
+`-c` / `--course <slug>` (defaults to `active_course` in config).
+
+## Architecture
+
+```
+build.rs      syn-scan commands/ -> fail build if a command fn lacks docs/tests
+app.rs        clap wiring + emit harness. No logic.
+manual.rs     howto text = include_str!("howto.gen.md") (xtask-produced)
+core/         store · db · compare · notebook · helper · skill · status · output · error
+models/       serde structs (Data enum = one variant per command; *Spec types)
+commands/     ONLY command fns (helpers live in core/)
+xtask/        gen-howto · gen-specs · build  (codegen pipelines)
+```
+
+**Layering rules:** `app.rs` is wiring only. Commands return
+`Result<Data, CarpenterError>` and never write SQL except through `core/db.rs`.
+One compare module (`core/compare.rs`), mirrored by the generated `helper.py`
+`_compare` — semantics locked by parity tests. Errors never raise to the caller;
+a bad spec maps to a `ValidationError` envelope, not a crash.
+
+## Build & test
+
+```sh
+cargo xtask build                            # gen-howto + gen-specs + build (canonical)
+cargo test --workspace                       # or: cargo nextest run --workspace
+cargo clippy --workspace --all-targets -- -D warnings
+cargo fmt --all -- --check
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace
+```
+
+`--workspace` / `--all` is required: this is a non-virtual workspace (root has
+`[package]`), so bare `cargo test` / `clippy` skip the `xtask` crate. Drift checks
+(howto stale, spec-marker freshness, skill determinism, compare parity, sync
+goldens, envelope smoke) all run inside `cargo test` and assert byte-equality
+with committed files — no CI needed.
+
+## Project layout
+
+```
+src/
+  app.rs          clap wiring + emit harness
+  manual.rs       generated howto (include_str!)
+  core/           store, db, notebook, helper, compare, status, skill, output, error
+  models/         serde Data/Spec structs + co-located examples
+  commands/       one module per command group (command fns only)
+  howto.gen.md    generated — never hand-edit
+xtask/            gen-howto, gen-specs, build
+docs/
+  design/         architecture + rationale (16 docs)
+  data-model/     ER, DDL, conventions, status derivation
+  specs/          per-command I/O contracts (tables generated from types)
+  adr/            architecture decision records
+  examples/       one worked example per CLI leaf (the howto's source)
+```
+
+## Documentation
+
+- [`docs/design/`](docs/design/README.md) — architecture, data flow, testing, execution model
+- [`docs/data-model/`](docs/data-model/README.md) — schema, ER diagram, status derivation
+- [`docs/specs/`](docs/specs/README.md) — exact command I/O contracts (envelope shapes)
+- [`docs/adr/`](docs/adr/README.md) — architecture decision records
+
+## License
+
+Apache License 2.0. See [`LICENSE`](LICENSE).

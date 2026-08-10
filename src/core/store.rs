@@ -1,0 +1,249 @@
+//! Filesystem root resolution, the app config dir, slug derivation, atomic
+//! writes, and `--spec` input reading.
+
+use std::io::Read;
+use std::path::{Path, PathBuf};
+
+use crate::core::error::CarpenterError;
+
+/// Resolved runtime paths: the workspace `root` and the app `config_dir`.
+#[derive(Debug, Clone)]
+pub struct Paths {
+    /// Workspace root (from `--root`, else cwd).
+    pub root: PathBuf,
+    /// App config directory (`~/.config/carpenter`).
+    pub config_dir: Option<PathBuf>,
+}
+
+impl Paths {
+    /// The courses directory (`<root>/courses`).
+    pub fn courses(&self) -> PathBuf {
+        self.root.join("courses")
+    }
+
+    /// The config file path (`<config_dir>/config.json`), if a config dir exists.
+    pub fn config_file(&self) -> Option<PathBuf> {
+        self.config_dir.as_ref().map(|d| d.join("config.json"))
+    }
+
+    /// The config dir, or `StoreError` if none could be resolved (no meta-command
+    /// state can be read/written).
+    pub fn require_config_dir(&self) -> Result<&Path, CarpenterError> {
+        self.config_dir
+            .as_deref()
+            .ok_or_else(|| CarpenterError::StoreError("no config directory resolved".into()))
+    }
+
+    /// The XDG root that contains both `carpenter/` and agent-app dirs (e.g.
+    /// `opencode/`). carpenter's [`config_dir`](Self::config_dir) is always a
+    /// `carpenter` leaf under it, so the root is its parent. Agent-app skill
+    /// integration resolves here (opencode is a sibling of `carpenter/`).
+    pub fn xdg_root(&self) -> Result<&Path, CarpenterError> {
+        self.require_config_dir()?
+            .parent()
+            .ok_or_else(|| CarpenterError::StoreError("config dir has no parent".into()))
+    }
+
+    /// A course directory.
+    pub fn course(&self, slug: &str) -> PathBuf {
+        self.courses().join(slug)
+    }
+}
+
+/// Resolve the workspace root: an explicit `--root`, else the current dir.
+pub fn resolve_root(root: Option<&Path>) -> PathBuf {
+    match root {
+        Some(p) => p.to_path_buf(),
+        None => std::env::current_dir().unwrap_or_default(),
+    }
+}
+
+/// The carpenter app config directory (`~/.config/carpenter` on Linux).
+pub fn config_dir() -> Option<PathBuf> {
+    dirs::config_dir().map(|d| d.join("carpenter"))
+}
+
+/// Derive a kebab-case slug from a title.
+///
+/// Algorithm (`docs/data-model/02-conventions.md`): NFC normalize; lowercase;
+/// collapse every run of non-`[a-z0-9]` to a single `-`; trim leading/trailing
+/// `-`; truncate to 60 chars (re-trim). (NFC has no observable effect here —
+/// every non-ASCII char collapses to `-` anyway — but it is applied for
+/// spec fidelity.)
+///
+/// Returns [`CarpenterError::ValidationError`] if no alphanumerics survive.
+/// Collision de-duplication (`-2`, `-3`, …) is the caller's job (it needs DB
+/// access to test uniqueness within a scope).
+pub fn slugify(title: &str) -> Result<String, CarpenterError> {
+    use unicode_normalization::UnicodeNormalization;
+    let lower: String = title.nfc().collect::<String>().to_lowercase();
+    let mut collapsed = String::with_capacity(lower.len());
+    let mut prev_dash = true;
+    for ch in lower.chars() {
+        if ch.is_ascii_alphanumeric() {
+            collapsed.push(ch);
+            prev_dash = false;
+        } else if !prev_dash {
+            collapsed.push('-');
+            prev_dash = true;
+        }
+    }
+    let slug: String = collapsed
+        .chars()
+        .take(60)
+        .collect::<String>()
+        .trim_matches('-')
+        .to_owned();
+    if slug.is_empty() {
+        return Err(CarpenterError::ValidationError(format!(
+            "cannot derive slug from title {title:?}"
+        )));
+    }
+    Ok(slug)
+}
+
+/// Map an [`std::io::Error`] to [`CarpenterError::StoreError`].
+pub fn io_to_store(e: std::io::Error) -> CarpenterError {
+    CarpenterError::StoreError(e.to_string())
+}
+
+/// Parse a `--spec` JSON string into a typed spec; bad JSON ⇒ `ValidationError`.
+pub fn parse_spec<T: serde::de::DeserializeOwned>(json: &str) -> Result<T, CarpenterError> {
+    serde_json::from_str(json)
+        .map_err(|e| CarpenterError::ValidationError(format!("bad spec: {e}")))
+}
+
+/// Atomically write bytes to `path` (temp file + rename on the same filesystem).
+pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), CarpenterError> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(io_to_store)?;
+    }
+    let tmp = path.with_extension("carpenter-tmp");
+    std::fs::write(&tmp, bytes).map_err(io_to_store)?;
+    std::fs::rename(&tmp, path).map_err(io_to_store)?;
+    Ok(())
+}
+
+/// Scaffold a course directory: write `course.json`, open `course.db` with the
+/// schema applied, and insert the `course_meta` row. Shared by `course create`
+/// and `build` so the on-disk course shape cannot drift between them.
+pub fn init_course_dir(
+    dir: &Path,
+    slug: &str,
+    title: &str,
+    goal: &str,
+    description: &str,
+) -> Result<(), CarpenterError> {
+    let now = crate::core::time::now_iso();
+    let course_json = serde_json::json!({
+        "slug": slug,
+        "title": title,
+        "goal": goal,
+        "description": description,
+        "created_at": now,
+    });
+    atomic_write(&dir.join("course.json"), course_json.to_string().as_bytes())?;
+    let conn = crate::core::db::open(&dir.join("course.db"))?;
+    crate::core::db::insert_course_meta(
+        &conn,
+        &crate::models::CourseRow {
+            slug: slug.into(),
+            title: title.into(),
+            goal: goal.into(),
+            description: description.into(),
+            created_at: now,
+        },
+    )?;
+    Ok(())
+}
+
+/// Is `dir` on `$PATH`? (Used by `install` to report `on_path`.)
+pub fn is_on_path(dir: &Path) -> bool {
+    let Ok(path_var) = std::env::var("PATH") else {
+        return false;
+    };
+    let target = dir.canonicalize().unwrap_or_else(|_| dir.to_path_buf());
+    path_var
+        .split(if cfg!(windows) { ';' } else { ':' })
+        .filter(|s| !s.is_empty())
+        .map(std::path::PathBuf::from)
+        .any(|p| p.canonicalize().ok().as_deref() == Some(&target))
+}
+
+/// Read a `--spec` argument: `-` for stdin, otherwise a file path.
+pub fn read_spec(arg: &str) -> Result<String, CarpenterError> {
+    if arg == "-" {
+        let mut buf = String::new();
+        std::io::stdin()
+            .read_to_string(&mut buf)
+            .map_err(io_to_store)?;
+        Ok(buf)
+    } else {
+        std::fs::read_to_string(arg).map_err(io_to_store)
+    }
+}
+
+#[cfg(test)]
+fn assert_slug(input: &str, expected: &str) {
+    assert_eq!(slugify(input).expect("slug ok"), expected);
+}
+
+#[cfg(test)]
+#[test]
+fn slugify_basic() {
+    assert_slug("Data Structures", "data-structures");
+}
+
+#[cfg(test)]
+#[test]
+fn slugify_collapses_runs() {
+    assert_slug("Arrays  101!!!", "arrays-101");
+}
+
+#[cfg(test)]
+#[test]
+fn slugify_trims_edges() {
+    assert_slug("-- Hello --", "hello");
+}
+
+#[cfg(test)]
+#[test]
+fn slugify_truncates_at_60() {
+    let long = "a".repeat(80);
+    let s = slugify(&long).expect("ok");
+    assert_eq!(s.len(), 60);
+}
+
+#[cfg(test)]
+#[test]
+fn slugify_non_ascii_collapses_to_dash() {
+    assert_slug("Café ☕", "caf");
+}
+
+#[cfg(test)]
+#[test]
+fn slugify_no_alnums_is_validation_error() {
+    let err = slugify("!!!");
+    assert!(matches!(err, Err(CarpenterError::ValidationError(_))));
+}
+
+#[cfg(test)]
+#[test]
+fn config_dir_is_under_carpenter_when_present() {
+    if let Some(d) = config_dir() {
+        assert!(d.ends_with("carpenter"));
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn atomic_write_roundtrips() {
+    let path = std::env::temp_dir().join(format!(
+        "carpenter-aw-{}-{}.txt",
+        std::process::id(),
+        std::sync::atomic::AtomicUsize::new(0).fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+    ));
+    atomic_write(&path, b"hello").expect("write");
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), "hello");
+    let _ = std::fs::remove_file(&path);
+}

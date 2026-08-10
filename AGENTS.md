@@ -1,0 +1,120 @@
+# AGENTS.md — carpenter
+
+Guidance for any agent or human working on carpenter. Read before editing.
+
+## What this is
+carpenter is a Rust CLI an LLM agent drives to build Python/Jupyter learning
+material. SQLite is the source of truth; notebooks render from it. No embedded
+LLM. Authoritative docs: `docs/design/`, `docs/data-model/`, `docs/specs/`,
+`docs/adr/` (each directory has a `README.md` index; read a section as one chunk).
+
+## Working principles
+How to think and communicate on this project. Read-deeply, YAGNI, and
+never-cut-safety are the ponytail ladder below; these are the rest.
+
+- **Engineering only.** No filler, preamble, or recap of what you just did. Lead
+  with the decision/answer. Dense over prose — tables, code, terse bullets.
+- **Design before code.** Research → plan → confirm → execute. Settle the design
+  before implementing; don't jump to abstractions.
+- **Automate everything verifiable.** Generate docs from the code surface (`howto`
+  from `clap`); add tests that fail on drift (docs vs. code), hangs (subprocess
+  timeouts), and dead/unused code (`clippy -D warnings`, the envelope smoke test).
+  If a human must keep two things in sync, that's a bug.
+- **One concern per file.** Small, self-contained docs (see `docs/` layout); no
+  monoliths.
+- **DRY across code and docs.** Anything repeated has one source and is generated or
+  referenced from it — never copy-pasted. Same rule for prose as for code.
+- **Source of truth & ownership.** Always state what's authoritative and who owns
+  what (DB vs. notebook; agent vs. learner). See Conventions.
+- **Record rationale.** Non-obvious decisions go in `docs/adr/` so they aren't
+  relitigated.
+
+## Build & test
+```bash
+cargo xtask build                 # = gen-howto + gen-specs + build  (the canonical build)
+cargo build                       # fails if a command lacks /// docs, an example file, or a test
+cargo test --workspace            # or: cargo nextest run --workspace  (howto+spec stale-checks, skill-determinism, compare-parity, sync-goldens, envelope-smoke)
+cargo clippy --workspace --all-targets -- -D warnings
+cargo fmt --all -- --check
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace
+```
+`--workspace`/`--all` is required: this is a non-virtual workspace (root has
+`[package]`), so bare `cargo test`/`clippy` skip the `xtask` crate and its
+stale-check tests. `cargo doc` rejects `-- -D warnings` in this toolchain, so
+the deny flag goes via `RUSTDOCFLAGS`.
+`cargo build` is self-documenting by construction:
+- `#![deny(missing_docs)]` — every public item needs a `///` (clap reads it as `--help`).
+- `build.rs` (syn scan) — every command fn needs a worked-example file at
+  `docs/examples/<module>/<fn>.md` (the howto's single example source) and a paired
+  `#[test] fn <name>_*` in the same module.
+
+Generated — **never hand-edit**: `src/howto.gen.md` (whole file), and the
+`<!-- BEGIN GENERATED -->`…`<!-- END GENERATED -->` table region in `docs/specs/*.md`
+(surrounding narrative is hand-maintained). Drift is caught inside `cargo test`:
+`howto_gen_md_is_fresh` and `specs_marker_regions_are_fresh` regenerate each to a
+buffer and assert byte-equality with the committed file (no `git`/CI needed). Run
+`cargo xtask build` (or `gen-howto`/`gen-specs`) to refresh them after a change.
+`src/howto.gen.md` is generated from `docs/examples/<module>/<fn>.md` — one
+hand-authored worked example per CLI leaf (invocation + spec + envelope). Add a
+command fn → add its example file, or `cargo build` fails.
+Rationale: [adr/007](docs/adr/007-compile-enforced-command-docs.md),
+[adr/008](docs/adr/008-specs-generated-from-types.md),
+[adr/009](docs/adr/009-skill-assembled-from-fields.md).
+
+## The ponytail ladder (apply before writing any code)
+Before writing code, stop at the first rung that holds:
+1. Does this need to exist? → no: skip it (YAGNI).
+2. Already in this codebase? → reuse it, don't rewrite.
+3. Stdlib / a crate does it? → use it.
+4. One line? → one line.
+5. Only then: the minimum that works.
+
+Lazy about the solution, never about reading. Read the code the change touches
+and trace the real flow before picking a rung. **Never cut** validation, the
+subprocess isolation boundary, the verification-only guardrail (helper must never
+print `expected`), or atomic writes. Code is small because it is necessary, not
+golfed.
+
+## Conventions
+- **Rust:** `clap` derive for CLI, `serde` for models, `rusqlite` for storage,
+  `thiserror` for errors. No `unwrap`/`expect` outside tests; use `?` and typed
+  `CarpenterError`.
+- **Layering:** `app.rs` = wiring only. Commands return `Result<Data,
+  CarpenterError>`; `_emit` wraps one envelope. Commands never touch SQL except
+  via `core/db.rs`. `commands/` holds **only** command fns (helpers live in
+  `core/`) — build.rs scans by signature, so a helper there with the right
+  signature breaks the build. One compare module (`core/compare.rs`); helper's
+  Python compare must match it (see `docs/specs/20-helper-contract.md`).
+- **Source of truth:** the DB. Notebooks are rendered; we do not parse notebooks
+  back into rows. Sync is idempotent and must preserve learner-edited stubs.
+- **Runtime:** learner Python runs in the course venv (`uv run`); `lesson execute`
+  and `quiz run` require `carpenter venv create` first (else `StoreError`).
+  `helper.py` is stdlib-only (no venv needed). See `docs/design/16-execution.md`.
+- **IDs:** stable strings (`s1`, `p1`, `q1`, …), not SQLite rowids. See
+  `docs/data-model/`.
+- **Errors:** never raise to the caller — always an error envelope. List/show
+  surface corrupt rows in `errors[]`; never silent `unwrap`/`continue`.
+- **Comments:** `///` doc comments are **mandatory** on all public items
+  (`#![deny(missing_docs)]`); each command fn also needs a worked-example file at
+  `docs/examples/<module>/<fn>.md` and the module a paired `#[test] fn <name>_*`
+  (build.rs enforces both — adr/007). Regular `//` comments stay discouraged — code
+  is self-documenting.
+
+## When you change something
+- Added/changed a command or flag → run `xtask gen-howto` + `xtask gen-specs`
+  (spec **tables** are generated from types via `gen-specs` — adr/008; tables
+  fill per-file as their `*Spec`/`Data` types land); update
+  `docs/data-model/` if schema moved. The `register` skill body is assembled from
+  `core/skill.rs` authored fields and **embeds the generated howto** (`manual::MANUAL`)
+  at render time — never hand-write command details into the skill; they come from the
+  generated manual (adr/009).
+- Added a command fn → it must have `///` + a worked-example file
+  `docs/examples/<module>/<fn>.md` + a `#[test] fn <name>_*`, or `cargo build` fails
+  (adr/007). Then `xtask gen-howto`
+  + `xtask gen-specs` regenerate the surfaces; commit the generated files.
+- Schema change → add a migration in `core/db.rs`; update `docs/data-model/`.
+- Keep tests green; add a case for new behavior. Every command fn has a mandated
+  `#[test] fn <name>_*` (adr/007) — a new one lands by construction or the build
+  fails. Every `Data` variant also needs a `rows()` example in its
+  `models::<group>::examples`, or the generated spec table (adr/008) **and** the
+  registry-driven `envelope_smoke_round_trips_every_example` won't cover it.

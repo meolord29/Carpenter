@@ -1,0 +1,25 @@
+# Design
+
+carpenter is a Rust CLI an LLM agent drives to build Python/Jupyter learning
+material. SQLite is the source of truth; notebooks render from it. Read in order:
+
+| # | file | topic |
+|---|------|-------|
+| 01 | [overview.md](01-overview.md) | what carpenter is, domain model, IDs, status derivation |
+| 02 | [stack.md](02-stack.md) | crates + tooling |
+| 03 | [architecture.md](03-architecture.md) | module map + layering rules |
+| 04 | [storage.md](04-storage.md) | filesystem layout |
+| 05 | [notebook-sync.md](05-notebook-sync.md) | render & idempotent sync contract |
+| 06 | [helper.md](06-helper.md) | verification-only self-check helper |
+| 07 | [compare.md](07-compare.md) | compare modes (single source) |
+| 08 | [quiz-run.md](08-quiz-run.md) | nbconvert quiz execution |
+| 09 | [agent-interface.md](09-agent-interface.md) | JSON envelope, errors, feedback loops |
+| 10 | [cli-surface.md](10-cli-surface.md) | command groups |
+| 11 | [data-flow.md](11-data-flow.md) | end-to-end flow |
+| 12 | [testing.md](12-testing.md) | test strategy + gates |
+| 13 | [out-of-scope.md](13-out-of-scope.md) | deferred (YAGNI) |
+| 14 | [build-order.md](14-build-order.md) | phased build plan |
+| 15 | [opencode-integration.md](15-opencode-integration.md) | skill-based agent-app integration (register/deregister) |
+| 16 | [execution.md](16-execution.md) | course venv (uv) + lesson execute + venv-backed quiz run |
+
+See also: [data-model/](../data-model/), [specs/](../specs/), [adr/](../adr/).
