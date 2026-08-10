@@ -8,6 +8,44 @@ material. SQLite is the source of truth; notebooks render from it. No embedded
 LLM. Authoritative docs: `docs/design/`, `docs/data-model/`, `docs/specs/`,
 `docs/adr/` (each directory has a `README.md` index; read a section as one chunk).
 
+## How it works (structure)
+
+Module map:
+
+```
+build.rs      syn-scan commands/ -> fail build if a command fn lacks docs/tests
+app.rs        clap wiring + emit harness. No logic.
+manual.rs     howto text = include_str!("howto.gen.md") (xtask-produced)
+core/         store · db · compare · notebook · helper · skill · status · output · error
+models/       serde structs (Data enum = one variant per command; *Spec types)
+commands/     ONLY command fns (helpers live in core/)
+xtask/        gen-howto · gen-specs · build  (codegen pipelines)
+```
+
+Request flow: `clap` parse → `app::run` resolves `Paths` + the active course →
+dispatches to a `commands::*` fn → the command returns `Result<Data,
+CarpenterError>` → `app::emit` wraps **one** JSON envelope on stdout (ok → exit 0,
+error → exit 1). Spec parsing is centralized in the `_emit` path, so a bad
+`--spec` maps to a `ValidationError` envelope, not a crash.
+
+Project layout:
+
+```
+src/
+  app.rs, main.rs, lib.rs, manual.rs
+  core/         store, db, notebook, helper, compare, status, skill, output, error, …
+  models/       serde Data/Spec structs + co-located `examples`
+  commands/     one module per command group (command fns only)
+  howto.gen.md  generated — never hand-edit
+xtask/          gen-howto, gen-specs, build
+docs/
+  design/       architecture + rationale (read a section as one chunk)
+  data-model/   ER, DDL, conventions, status derivation
+  specs/        per-command I/O contracts (tables generated from types)
+  adr/          architecture decision records
+  examples/     one worked example per CLI leaf (the howto's source)
+```
+
 ## Working principles
 How to think and communicate on this project. Read-deeply, YAGNI, and
 never-cut-safety are the ponytail ladder below; these are the rest.

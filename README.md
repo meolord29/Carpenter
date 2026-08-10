@@ -32,43 +32,6 @@ A human *can* run it directly — it has a `--help` and a `howto` manual — but
 intended operator is an agent. The only agent app currently supported is
 [opencode](https://opencode.ai); see [Install](#install) to wire it up.
 
-## Design pillars
-
-- **DB is the source of truth.** One `course.db` per course; notebooks are
-  generated, never parsed back into rows ([ADR-002](docs/adr/002-db-source-of-truth.md)).
-- **Render, don't hand-edit.** Every managed notebook cell is tagged
-  `metadata.managed` and regenerated from the DB via `lesson sync`. Learner-filled
-  stubs and learner-authored cells are preserved (3-way via `scaffold_hash`).
-- **Agent owns the DB; learner owns stubs.** carpenter writes the rows + scaffold;
-  the learner fills the function bodies; a verification-only `helper.py` scores them
-  and writes `pass_or_fail` back — it never prints the `expected` value.
-- **Compile-enforced self-documentation.** `#![deny(missing_docs)]` + a `build.rs`
-  `syn` scan fail the build if a command lacks a `///` example block or a paired
-  `#[test]` ([ADR-007](docs/adr/007-compile-enforced-command-docs.md)).
-- **Generated docs surfaces.** The `howto` manual is scraped from `clap`; spec
-  tables are generated from serde types. Drift is caught inside `cargo test`.
-- **One envelope per command.** Each command prints exactly one JSON envelope on
-  stdout (`status`/`message`/`data` or `status`/`message`/`code`/`details`) and
-  exits 0/1 — machine-parseable for the agent, never a TTY prompt.
-
-## Domain model
-
-```
-Course
- ├─ Plan (course)           bullet goals -> linked lessons
- └─ Lesson                  = one rendered notebook; ordered roadmap
-     ├─ Plan (lesson)
-     ├─ Section             teaching (markdown + code snippets -> cells)
-     │   └─ Practice        fill-in function (the "practice session")
-     │       └─ TestCase*
-     └─ Quiz                assessment function (end of notebook)
-         └─ TestCase*
-```
-
-Practice and Quiz share a `Checkable` shape (`name`, `signature`, `prompt` +
-cases) but live in separate tables. IDs are stable strings (`s1`, `p1`, `q1`,
-`c1`, …), never reused.
-
 ## How it works
 
 1. `course create --spec -` → `course.json` + empty `course.db`.
@@ -177,65 +140,12 @@ Exact input/output (spec JSON shapes + envelope `data`): `carpenter howto` and
 [`docs/specs/`](docs/specs/README.md). Global flags: `--version`, `--root <path>`,
 `-c` / `--course <slug>` (defaults to `active_course` in config).
 
-## Architecture
+## Learn more
 
-```
-build.rs      syn-scan commands/ -> fail build if a command fn lacks docs/tests
-app.rs        clap wiring + emit harness. No logic.
-manual.rs     howto text = include_str!("howto.gen.md") (xtask-produced)
-core/         store · db · compare · notebook · helper · skill · status · output · error
-models/       serde structs (Data enum = one variant per command; *Spec types)
-commands/     ONLY command fns (helpers live in core/)
-xtask/        gen-howto · gen-specs · build  (codegen pipelines)
-```
-
-**Layering rules:** `app.rs` is wiring only. Commands return
-`Result<Data, CarpenterError>` and never write SQL except through `core/db.rs`.
-One compare module (`core/compare.rs`), mirrored by the generated `helper.py`
-`_compare` — semantics locked by parity tests. Errors never raise to the caller;
-a bad spec maps to a `ValidationError` envelope, not a crash.
-
-## Build & test
-
-```sh
-cargo xtask build                            # gen-howto + gen-specs + build (canonical)
-cargo test --workspace                       # or: cargo nextest run --workspace
-cargo clippy --workspace --all-targets -- -D warnings
-cargo fmt --all -- --check
-RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace
-```
-
-`--workspace` / `--all` is required: this is a non-virtual workspace (root has
-`[package]`), so bare `cargo test` / `clippy` skip the `xtask` crate. Drift checks
-(howto stale, spec-marker freshness, skill determinism, compare parity, sync
-goldens, envelope smoke) all run inside `cargo test` and assert byte-equality
-with committed files — no CI needed.
-
-## Project layout
-
-```
-src/
-  app.rs          clap wiring + emit harness
-  manual.rs       generated howto (include_str!)
-  core/           store, db, notebook, helper, compare, status, skill, output, error
-  models/         serde Data/Spec structs + co-located examples
-  commands/       one module per command group (command fns only)
-  howto.gen.md    generated — never hand-edit
-xtask/            gen-howto, gen-specs, build
-docs/
-  design/         architecture + rationale (16 docs)
-  data-model/     ER, DDL, conventions, status derivation
-  specs/          per-command I/O contracts (tables generated from types)
-  adr/            architecture decision records
-  examples/       one worked example per CLI leaf (the howto's source)
-```
-
-## Documentation
-
-- [`docs/design/`](docs/design/README.md) — architecture, data flow, testing, execution model
-- [`docs/data-model/`](docs/data-model/README.md) — schema, ER diagram, status derivation
-- [`docs/specs/`](docs/specs/README.md) — exact command I/O contracts (envelope shapes)
-- [`docs/adr/`](docs/adr/README.md) — architecture decision records
+- `carpenter howto` — the full, always-current command manual (one worked example per command).
+- [`docs/specs/`](docs/specs/README.md) — exact command I/O contracts (envelope shapes).
+- [`AGENTS.md`](AGENTS.md) — how carpenter works internally + contributor guide (build, layout, conventions, editing rules).
+- [`docs/design/`](docs/design/README.md) · [`docs/data-model/`](docs/data-model/README.md) · [`docs/adr/`](docs/adr/README.md) — full design, schema, and decisions.
 
 ## License
 
