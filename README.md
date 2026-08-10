@@ -1,15 +1,35 @@
 # carpenter
 
-Agent-driven CLI that builds Python/Jupyter learning material.
+**An AI agent builds your Python course. carpenter grades it — instantly, deterministically.**
 
-**carpenter** is a single Rust binary an LLM agent drives to author, render, and
-score Python/Jupyter courses. SQLite is the source of truth; notebooks are
-*rendered* from it. There is no embedded LLM — an external agent
-([opencode](https://opencode.ai)) is the tutor; carpenter is deterministic
-storage, rendering, and execution.
+Tell your agent what you want to learn. It drafts an outline, you approve it, and
+carpenter renders an interactive Jupyter notebook: teaching cells, practice stubs,
+and quizzes that score themselves the moment you hit Run. Stop researching the
+"best" resource — start practicing on one built for you.
+
+The split that makes it work: **the LLM is the creative tutor; carpenter is the
+deterministic backbone.** Storage, rendering, and grading live in a Rust binary
+over SQLite — reproducible, inspectable, no "the AI said I'm right" false greens.
+The agent decides what to teach; carpenter keeps score.
+
+- **Generate, don't search.** Describe what you want to learn → your agent drafts a
+  course outline → you approve → a rendered notebook with teaching, practice, and
+  quizzes. Kills tutorial hell.
+- **Instant, trustworthy grading.** A verification-only `helper.py` scores every
+  check live and writes `pass_or_fail` to SQLite. It never prints the expected
+  answer; compare rules are parity-tested Rust ↔ Python.
+- **Tight feedback loop.** Practice attaches to its teaching section; quizzes cap
+  each lesson; `progress` / `notes` / `skip` let you steer. Status derives
+  bottom-up — no manual bookkeeping.
+- **Deterministic backbone.** One Rust binary, a single SQLite file, `uv`-managed
+  course venv, docs generated from the code (a drift test fails the build if they
+  go stale). Creative tutor; reproducible scoreboard.
 
 > **Status:** experimental / early. `v0.1.0` — all core build phases have landed;
-> no stability guarantees yet.
+> no stability guarantees yet. Python/Jupyter only; opencode today (`claude-code` /
+> `agents` stubbed behind `--app`). Apache-2.0.
+
+<!-- TODO: 30-sec terminal GIF here — tell agent → approve outline → fill stub → INSTANT PASS → progress summary -->
 
 ## Agent-driven, not manual
 
