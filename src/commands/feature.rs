@@ -5,9 +5,9 @@ use crate::core::error::CarpenterError;
 use crate::core::store::{self, Paths};
 use crate::models::Data;
 
-/// File a feature request from a spec JSON (`--spec -`/file).
-pub fn file(paths: &Paths, spec_json: &str) -> Result<Data, CarpenterError> {
-    let spec = store::parse_spec(spec_json)?;
+/// File a feature request from a spec YAML (`--spec -`/file).
+pub fn file(paths: &Paths, spec_text: &str) -> Result<Data, CarpenterError> {
+    let spec = store::parse_spec(spec_text)?;
     let (id, path) = bugfile::file(paths.require_config_dir()?, Kind::Feature, &spec)?;
     Ok(Data::IssueFile {
         id,
@@ -52,7 +52,7 @@ mod tests {
     use crate::commands::testutil;
 
     const SPEC: &str =
-        r#"{"title":"add dark mode","description":"theme switch","rationale":"users ask for it"}"#;
+        "title: add dark mode\ndescription: theme switch\nrationale: users ask for it\n";
 
     #[test]
     fn file_ok() {
@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn file_rejects_repro_as_feature() {
         let paths = testutil::meta_setup();
-        let err = file(&paths, r#"{"title":"t","description":"d","repro":"run x"}"#).unwrap_err();
+        let err = file(&paths, "title: t\ndescription: d\nrepro: run x\n").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
         let _ = std::fs::remove_dir_all(paths.root);
         let _ = std::fs::remove_dir_all(paths.config_dir.unwrap());

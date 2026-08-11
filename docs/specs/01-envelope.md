@@ -14,7 +14,7 @@ error:  {"status":"error", "message":"…", "code":"NotFound", "details":{ … }
 
 - `NotFound` — requested id/slug does not exist.
 - `AlreadyExists` — create would collide (e.g. duplicate slug, `.venv` present).
-- `ValidationError` — bad `--spec` JSON, unknown enum value, failed cross-field
+- `ValidationError` — bad `--spec` YAML, unknown enum value, failed cross-field
   validation, or an unsupported flag value (e.g. `register --app claude-code`).
 - `StoreError` — SQLite failure, missing file (e.g. no course venv for `quiz run`),
   or `uv`/`jupyter` not on PATH.
@@ -39,7 +39,7 @@ error:  {"status":"error", "message":"…", "code":"NotFound", "details":{ … }
   [design/05](../design/05-notebook-sync.md)).
 
 ## Policies
-- **`--spec`** accepts a file path or `-` for stdin; JSON is validated up front
+- **`--spec`** accepts a file path or `-` for stdin; YAML is validated up front
   inside the envelope path, so a bad spec returns a `ValidationError` envelope
   (not a crash).
 - **Corrupt rows** in aggregate `list` commands return `ok` with an `errors[]`

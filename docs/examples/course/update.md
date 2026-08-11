@@ -1,17 +1,15 @@
 **example:**
 
 ```sh
-carpenter course update data-structures --spec course.json --force
+carpenter course update data-structures --spec course.yaml --force
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "title": "Data Structures",
-  "slug": "data-structures",
-  "goal": "Understand core data structures from the ground up",
-  "description": "Arrays, lists, hashing, trees."
-}
+```yaml
+title: Data Structures
+slug: data-structures
+goal: Understand core data structures from the ground up
+description: Arrays, lists, hashing, trees.
 ```
 
 Result (one envelope on stdout):

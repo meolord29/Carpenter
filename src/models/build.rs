@@ -40,7 +40,7 @@ pub mod examples {
                 "`skill` outcomes: `{refreshed:true,…}` · `{refreshed:false,reason:\"not_registered\",warning:\"…\"}` · `--no-skill` ⇒ `skill:null`",
                 Data::Upgrade {
                     upgraded: true,
-                    version: String::from("0.1.0"),
+                    version: env!("CARGO_PKG_VERSION").into(),
                     bin: String::from("~/.local/bin/carpenter"),
                     source: String::from("/src/carpenter"),
                     skill: Some(json!({"refreshed": true, "app": "opencode", "path": "~/.config/opencode/skills/carpenter/SKILL.md"})),

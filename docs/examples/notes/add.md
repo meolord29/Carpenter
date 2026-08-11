@@ -1,20 +1,17 @@
 **example:**
 
 ```sh
-carpenter -c ds notes add --spec note.json
+carpenter -c ds notes add --spec note.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "kind": "gap",
-  "tags": [
-    "recursion"
-  ],
-  "recurrence": "new",
-  "related": "q2",
-  "text": "Learner struggles with base cases."
-}
+```yaml
+kind: gap
+tags:
+  - recursion
+recurrence: new
+related: q2
+text: Learner struggles with base cases.
 ```
 
 Result (one envelope on stdout):

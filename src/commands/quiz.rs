@@ -210,12 +210,7 @@ mod tests {
     use super::*;
     use crate::commands::testutil;
 
-    const LESSON: &str = r##"{
-      "title": "Arrays", "slug": "arrays",
-      "sections": [{"title":"s","snippets":[{"kind":"markdown","content":"hi"}],
-        "practice": [{"name":"f","signature":"def f(x):","cases":[{"args":[1],"expected":1}]}]}],
-      "quizzes": [{"name":"max_value","signature":"def max_value(arr):","cases":[{"args":[[3,1,2]],"expected":3}]}]
-    }"##;
+    const LESSON: &str = "title: Arrays\nslug: arrays\nsections:\n  - title: s\n    snippets:\n      - kind: markdown\n        content: hi\n    practice:\n      - name: f\n        signature: \"def f(x):\"\n        cases:\n          - args: [1]\n            expected: 1\nquizzes:\n  - name: max_value\n    signature: \"def max_value(arr):\"\n    cases:\n      - args:\n          - [3, 1, 2]\n        expected: 3\n";
 
     fn setup_lesson() -> (Paths, String) {
         let (paths, slug) = testutil::setup();

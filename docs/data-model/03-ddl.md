@@ -40,6 +40,7 @@ CREATE TABLE practice (
   name         TEXT NOT NULL,             -- function name
   signature    TEXT NOT NULL,             -- def sum_array(arr):
   prompt       TEXT NOT NULL DEFAULT '',
+  solution     TEXT NOT NULL DEFAULT '',  -- author reference solution (adr/015); author-only, never rendered
   ord          INTEGER NOT NULL,
   pass_or_fail INTEGER NOT NULL DEFAULT 0,-- 1 = last check passed all cases (set by helper)
   last_check   TEXT NOT NULL DEFAULT '{}',-- JSON {passed,total,cases:[{case_id,passed,error?}]}
@@ -52,6 +53,7 @@ CREATE TABLE quizzes (
   name         TEXT NOT NULL,
   signature    TEXT NOT NULL,
   prompt       TEXT NOT NULL DEFAULT '',
+  solution     TEXT NOT NULL DEFAULT '',  -- author reference solution (adr/015); author-only, never rendered
   ord          INTEGER NOT NULL,
   pass_or_fail INTEGER NOT NULL DEFAULT 0,-- 1 = last check passed all cases (set by helper)
   last_check   TEXT NOT NULL DEFAULT '{}',-- JSON {passed,total,cases:[{case_id,passed,error?}]}

@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 static N: AtomicUsize = AtomicUsize::new(0);
 
-const COURSE_SPEC: &str = r#"{"title":"Data Structures","goal":"learn DS"}"#;
+const COURSE_SPEC: &str = "title: Data Structures\ngoal: learn DS\n";
 
 /// Create a temp workspace with one course; return `(paths, course_slug)`.
 pub fn setup() -> (Paths, String) {

@@ -12,7 +12,7 @@ use crate::models::goal::GoalListItem;
 use crate::models::issue::IssueListItem;
 use crate::models::lesson::{
     CheckableTree, LessonConflict, LessonCounts, LessonListItem, LessonProgress, LessonRow,
-    SectionTree,
+    SectionTree, VerifyCheckable,
 };
 use crate::models::note::NoteItem;
 use crate::models::plan::{PlanListItem, PlanRow};
@@ -259,6 +259,28 @@ pub enum Data {
         cells: ExecuteCells,
         /// errored cells.
         errors: Vec<ExecError>,
+    },
+    /// `lesson verify`.
+    LessonVerify {
+        /// lesson id (`Some` in `<id>` mode; `None` in `--spec` mode).
+        lesson_id: Option<String>,
+        /// checkables with a reference `solution`.
+        checked: i64,
+        /// checkables whose solution passes all its cases.
+        passing: i64,
+        /// checkables whose solution fails ≥1 case.
+        failing: i64,
+        /// per-checkable results (cases nested under each checkable).
+        checkables: Vec<VerifyCheckable>,
+    },
+    /// `lesson new`.
+    LessonNew {
+        /// the YAML template (stdout/print mode; `None` with `--out`).
+        #[serde(skip_serializing_if = "Option::is_none")]
+        yaml: Option<String>,
+        /// file written (`--out`; `None` in print mode).
+        #[serde(skip_serializing_if = "Option::is_none")]
+        written_to: Option<String>,
     },
     // ---- quiz ----
     /// `quiz run`.
@@ -602,6 +624,15 @@ impl Data {
             Self::LessonDelete { id, .. } => format!("lesson deleted: {id}"),
             Self::LessonSync { id, .. } => format!("lesson synced: {id}"),
             Self::LessonExecute { id, .. } => format!("lesson executed: {id}"),
+            Self::LessonVerify { lesson_id, .. } => format!(
+                "lesson verified: {}",
+                lesson_id.as_deref().unwrap_or("(spec)")
+            ),
+            Self::LessonNew {
+                written_to: Some(p),
+                ..
+            } => format!("lesson template written: {p}"),
+            Self::LessonNew { .. } => String::from("lesson template printed"),
             Self::QuizRun { lesson_id, .. } => format!("quizzes run: {lesson_id}"),
             Self::QuizList { .. } => String::from("quizzes listed"),
             Self::QuizShow { id, .. } => format!("quiz shown: {id}"),

@@ -13,12 +13,14 @@ LLM. Authoritative docs: `docs/design/`, `docs/data-model/`, `docs/specs/`,
 Module map:
 
 ```
-build.rs      syn-scan commands/ -> fail build if a command fn lacks docs/tests
+build.rs      syn-scan commands/ -> fail build if a command fn lacks docs/tests;
+              also gate examples/*.md scenarios (>=3 distinct fns each; adr/013)
 app.rs        clap wiring + emit harness. No logic.
 manual.rs     howto text = include_str!("howto.gen.md") (xtask-produced)
 core/         store · db · compare · notebook · helper · skill · status · output · error
 models/       serde structs (Data enum = one variant per command; *Spec types)
 commands/     ONLY command fns (helpers live in core/)
+examples/     scenario files (one multi-command workflow each; .md only)
 xtask/        gen-howto · gen-specs · build  (codegen pipelines)
 ```
 
@@ -44,6 +46,7 @@ docs/
   specs/        per-command I/O contracts (tables generated from types)
   adr/          architecture decision records
   examples/     one worked example per CLI leaf (the howto's source)
+examples/        scenario files (one multi-command workflow each; .md only — gated, adr/013)
 ```
 
 ## Working principles
@@ -70,7 +73,7 @@ never-cut-safety are the ponytail ladder below; these are the rest.
 ## Build & test
 ```bash
 cargo xtask build                 # = gen-howto + gen-specs + build  (the canonical build)
-cargo build                       # fails if a command lacks /// docs, an example file, or a test
+cargo build                       # fails if a command lacks /// docs, an example file, or a test; or a scenario fails the >=3-fn gate
 cargo test --workspace            # or: cargo nextest run --workspace  (howto+spec stale-checks, skill-determinism, compare-parity, sync-goldens, envelope-smoke)
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all -- --check
@@ -84,7 +87,9 @@ the deny flag goes via `RUSTDOCFLAGS`.
 - `#![deny(missing_docs)]` — every public item needs a `///` (clap reads it as `--help`).
 - `build.rs` (syn scan) — every command fn needs a worked-example file at
   `docs/examples/<module>/<fn>.md` (the howto's single example source) and a paired
-  `#[test] fn <name>_*` in the same module.
+  `#[test] fn <name>_*` in the same module. It also gates `examples/*.md` scenarios:
+  each must invoke ≥3 distinct command fns (resolved via the same signature-based
+  set), and ≥1 must exist (adr/013).
 
 Generated — **never hand-edit**: `src/howto.gen.md` (whole file), and the
 `<!-- BEGIN GENERATED -->`…`<!-- END GENERATED -->` table region in `docs/specs/*.md`
@@ -98,6 +103,12 @@ command fn → add its example file, or `cargo build` fails.
 Rationale: [adr/007](docs/adr/007-compile-enforced-command-docs.md),
 [adr/008](docs/adr/008-specs-generated-from-types.md),
 [adr/009](docs/adr/009-skill-assembled-from-fields.md).
+
+CI (`.github/workflows/ci.yml`) mirrors these gates on an `ubuntu`/`macos`/`windows`
+matrix — `rust-toolchain.toml` pins stable; `uv` is installed;
+`.gitattributes` (`eol=lf`) keeps the stale-checks green on Windows. See
+[design/17](docs/design/17-cross-platform.md),
+[adr/012](docs/adr/012-cross-platform-paths.md).
 
 ## The ponytail ladder (apply before writing any code)
 Before writing code, stop at the first rung that holds:
@@ -128,6 +139,10 @@ golfed.
 - **Runtime:** learner Python runs in the course venv (`uv run`); `lesson execute`
   and `quiz run` require `carpenter venv create` first (else `StoreError`).
   `helper.py` is stdlib-only (no venv needed). See `docs/design/16-execution.md`.
+- **Paths:** per-OS — `config_dir` via `dirs` (`~/.config` Linux, `~/Library/…` macOS,
+  `%APPDATA%` Windows); `bin_dir` default + binary name via `core/platform.rs`
+  (`#[cfg(target_os)]`). One platform module; no scattered `#[cfg]`. See
+  `docs/design/17-cross-platform.md`, `docs/adr/012-cross-platform-paths.md`.
 - **IDs:** stable strings (`s1`, `p1`, `q1`, …), not SQLite rowids. See
   `docs/data-model/`.
 - **Errors:** never raise to the caller — always an error envelope. List/show
@@ -150,6 +165,10 @@ golfed.
   `docs/examples/<module>/<fn>.md` + a `#[test] fn <name>_*`, or `cargo build` fails
   (adr/007). Then `xtask gen-howto`
   + `xtask gen-specs` regenerate the surfaces; commit the generated files.
+- Added/changed a scenario → `examples/*.md` are multi-command workflows; each must
+  invoke ≥3 distinct command fns or `cargo build` fails (adr/013). `xtask gen-howto`
+  embeds them verbatim into a `## Scenarios` section (→ auto-inlined into `SKILL.md`
+  by `render()`); commit the regenerated `src/howto.gen.md`. `.md` only under `examples/`.
 - Schema change → add a migration in `core/db.rs`; update `docs/data-model/`.
 - Keep tests green; add a case for new behavior. Every command fn has a mandated
   `#[test] fn <name>_*` (adr/007) — a new one lands by construction or the build

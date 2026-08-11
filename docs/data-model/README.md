@@ -12,4 +12,4 @@ docs to match.
 | 02 | [conventions.md](02-conventions.md) | keys, FKs, JSON payloads, ordering |
 | 03 | [ddl.md](03-ddl.md) | full `CREATE TABLE` statements |
 | 04 | [status-derivation.md](04-status-derivation.md) | how lesson/goal status is computed |
-| 05 | [app-config.md](05-app-config.md) | `~/.config/carpenter/` app-level files |
+| 05 | [app-config.md](05-app-config.md) | app-level files (per-OS config dir) |

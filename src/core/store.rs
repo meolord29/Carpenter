@@ -107,10 +107,16 @@ pub fn io_to_store(e: std::io::Error) -> CarpenterError {
     CarpenterError::StoreError(e.to_string())
 }
 
-/// Parse a `--spec` JSON string into a typed spec; bad JSON ⇒ `ValidationError`.
-pub fn parse_spec<T: serde::de::DeserializeOwned>(json: &str) -> Result<T, CarpenterError> {
-    serde_json::from_str(json)
-        .map_err(|e| CarpenterError::ValidationError(format!("bad spec: {e}")))
+/// Parse a `--spec` string into a typed spec. **YAML-only**
+/// ([adr/014](../../docs/adr/014-yaml-spec-input.md)): `serde_yml::from_str` is
+/// the single parser (block scalars for multi-line `content`, no JSON `\n`/`\"`
+/// escaping). A parse failure ⇒ `ValidationError`. Note YAML is a superset of
+/// JSON, so a flow-style JSON mapping still parses — there is just no separate
+/// JSON code path.
+pub fn parse_spec<T: serde::de::DeserializeOwned + 'static>(
+    text: &str,
+) -> Result<T, CarpenterError> {
+    serde_yml::from_str(text).map_err(|e| CarpenterError::ValidationError(format!("bad spec: {e}")))
 }
 
 /// Atomically write bytes to `path` (temp file + rename on the same filesystem).
@@ -246,4 +252,46 @@ fn atomic_write_roundtrips() {
     atomic_write(&path, b"hello").expect("write");
     assert_eq!(std::fs::read_to_string(&path).unwrap(), "hello");
     let _ = std::fs::remove_file(&path);
+}
+
+#[cfg(test)]
+#[derive(serde::Deserialize, PartialEq, Debug)]
+struct SpecProbe {
+    name: String,
+    n: i64,
+    content: String,
+}
+
+#[cfg(test)]
+#[test]
+fn parse_spec_accepts_yaml() {
+    let yaml = "name: x\nn: 2\ncontent: a\n";
+    let v: SpecProbe = parse_spec(yaml).expect("valid YAML spec");
+    assert_eq!(v.name, "x");
+    assert_eq!(v.n, 2);
+}
+
+#[cfg(test)]
+#[test]
+fn parse_spec_yaml_block_scalar_preserves_newlines() {
+    // The motivating win for YAML: multi-line `content` without `\n`/`\"` escaping.
+    let yaml = "name: x\nn: 2\ncontent: |\n  line one\n  line two\n";
+    let v: SpecProbe = parse_spec(yaml).expect("YAML block scalar");
+    assert_eq!(v.content, "line one\nline two\n");
+}
+
+#[cfg(test)]
+#[test]
+fn parse_spec_rejects_missing_required_field() {
+    // Valid YAML, wrong shape (missing `n`) ⇒ ValidationError.
+    let err = parse_spec::<SpecProbe>("name: x\ncontent: a\n").unwrap_err();
+    assert!(matches!(err, CarpenterError::ValidationError(_)));
+}
+
+#[cfg(test)]
+#[test]
+fn parse_spec_rejects_garbage() {
+    // Structurally broken in both JSON and YAML ⇒ ValidationError.
+    let err = parse_spec::<SpecProbe>("{[}").unwrap_err();
+    assert!(matches!(err, CarpenterError::ValidationError(_)));
 }

@@ -14,7 +14,7 @@ landed yet keeps a hand table (no markers) until its phase ships. Pure-prose fil
 ## Envelope & conventions
 - [01-envelope.md](01-envelope.md) — envelope format, error codes, reused shapes, `--force` policy, global flags
 
-## Spec input shapes (authored JSON for `--spec`)
+## Spec input shapes (authored YAML for `--spec`)
 - [02-course-spec.md](02-course-spec.md)
 - [03-lesson-spec.md](03-lesson-spec.md)
 - [04-plan-spec.md](04-plan-spec.md)

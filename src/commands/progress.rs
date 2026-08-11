@@ -88,12 +88,7 @@ mod tests {
     use super::*;
     use crate::commands::testutil;
 
-    const LESSON: &str = r##"{
-      "title": "Arrays", "slug": "arrays",
-      "sections": [{"title":"s","snippets":[{"kind":"markdown","content":"hi"}],
-        "practice": [{"name":"f","signature":"def f(x):","cases":[{"args":[1],"expected":1}]}]}],
-      "quizzes": [{"name":"max_value","signature":"def max_value(arr):","cases":[{"args":[[3,1,2]],"expected":3}]}]
-    }"##;
+    const LESSON: &str = "title: Arrays\nslug: arrays\nsections:\n  - title: s\n    snippets:\n      - kind: markdown\n        content: hi\n    practice:\n      - name: f\n        signature: \"def f(x):\"\n        cases:\n          - args: [1]\n            expected: 1\nquizzes:\n  - name: max_value\n    signature: \"def max_value(arr):\"\n    cases:\n      - args:\n          - [3, 1, 2]\n        expected: 3\n";
 
     /// Set up one lesson with one practice + one quiz (total=2 non-skipped items).
     fn setup() -> (Paths, String) {
@@ -128,14 +123,8 @@ mod tests {
         conn.execute("UPDATE quizzes SET pass_or_fail=1 WHERE id='q1'", [])
             .unwrap();
         drop(conn);
-        crate::commands::notes::add(&paths, &slug, r#"{"kind":"gap","tags":["x"],"text":"a"}"#)
-            .unwrap();
-        crate::commands::notes::add(
-            &paths,
-            &slug,
-            r#"{"kind":"strength","tags":["x"],"text":"b"}"#,
-        )
-        .unwrap();
+        crate::commands::notes::add(&paths, &slug, "kind: gap\ntags: [x]\ntext: a\n").unwrap();
+        crate::commands::notes::add(&paths, &slug, "kind: strength\ntags: [x]\ntext: b\n").unwrap();
 
         let Data::ProgressSummary {
             lessons,

@@ -12,9 +12,9 @@ use crate::core::store::{self, Paths};
 use crate::models::course::{CourseCounts, CourseRow, CourseSpec};
 use crate::models::{common::RowError, Data};
 
-/// Create a course from a spec JSON (`--spec -`/file).
-pub fn create(paths: &Paths, spec_json: &str) -> Result<Data, CarpenterError> {
-    let spec: CourseSpec = store::parse_spec(spec_json)?;
+/// Create a course from a spec YAML (`--spec -`/file).
+pub fn create(paths: &Paths, spec_text: &str) -> Result<Data, CarpenterError> {
+    let spec: CourseSpec = store::parse_spec(spec_text)?;
     validate_spec(&spec)?;
     let slug = match &spec.slug {
         Some(s) => s.clone(),
@@ -98,7 +98,7 @@ pub fn show(paths: &Paths, slug: &str) -> Result<Data, CarpenterError> {
 pub fn update(
     paths: &Paths,
     slug: &str,
-    spec_json: &str,
+    spec_text: &str,
     force: bool,
 ) -> Result<Data, CarpenterError> {
     if !force {
@@ -106,7 +106,7 @@ pub fn update(
             "update requires --force: course {slug}"
         )));
     }
-    let spec: CourseSpec = store::parse_spec(spec_json)?;
+    let spec: CourseSpec = store::parse_spec(spec_text)?;
     validate_spec(&spec)?;
     let dir = paths.course(slug);
     let conn = open_course(paths, slug)?;
@@ -213,7 +213,7 @@ mod tests {
         }
     }
 
-    const SPEC: &str = r#"{"title":"Data Structures","goal":"learn DS"}"#;
+    const SPEC: &str = "title: Data Structures\ngoal: learn DS\n";
 
     #[test]
     fn create_ok() {
@@ -240,9 +240,9 @@ mod tests {
     #[test]
     fn create_rejects_bad_spec() {
         let p = test_paths();
-        let err = create(&p, r#"{"title":"","goal":"g"}"#).unwrap_err();
+        let err = create(&p, "title: ''\ngoal: g\n").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
-        let err = create(&p, "not json").unwrap_err();
+        let err = create(&p, "{[}").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
         cleanup(&p);
     }
@@ -251,7 +251,7 @@ mod tests {
     fn list_ok() {
         let p = test_paths();
         create(&p, SPEC).expect("c1");
-        create(&p, r#"{"title":"Algorithms","goal":"learn algos"}"#).expect("c2");
+        create(&p, "title: Algorithms\ngoal: learn algos\n").expect("c2");
         let Data::CourseList { courses, errors } = list(&p).expect("list") else {
             panic!("CourseList");
         };
@@ -289,7 +289,7 @@ mod tests {
         let data = update(
             &p,
             "data-structures",
-            r#"{"title":"DS2","goal":"g2","description":"d2"}"#,
+            "title: DS2\ngoal: g2\ndescription: d2\n",
             true,
         )
         .expect("update");

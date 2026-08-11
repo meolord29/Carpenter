@@ -2,7 +2,9 @@
 
 ```
 build.rs          syn-scan commands/ -> fail build if a command fn lacks a /// example
-                  block or a paired #[test] fn <name>_* (adr/007).
+                  block or a paired #[test] fn <name>_* (adr/007). Also gates
+                  examples/*.md scenarios: each must reference >=3 distinct command
+                  fns; >=1 must exist (adr/013).
 app.rs            clap wiring + _emit envelope harness. No logic.
 manual.rs         howto text = include_str!("howto.gen.md") (xtask-produced).
 core/
@@ -26,7 +28,8 @@ models/           serde structs: Data (command success-payload enum, one variant
 commands/         mod.rs + course, lesson, plan, goal, quiz, progress, notes,
                   bug, feature, config, venv, skip, link, build, install, upgrade,
                   register, deregister, howto — holds ONLY command fns (helpers in core/)
-xtask/            gen-howto: introspect clap Command -> howto.gen.md
+xtask/            gen-howto: introspect clap Command + docs/examples/* + examples/*.md
+                  (scenarios) -> howto.gen.md
                   gen-specs: *Spec/Data types -> docs/specs/*.md
                   build: gen-howto + gen-specs + cargo build (--release for `upgrade`)
 ```
@@ -43,3 +46,7 @@ item (clap reads it as `--help`); `build.rs` fails the build if a command fn lac
 an example block or a paired `#[test] fn <name>_*` (see [adr/007](../adr/007-compile-enforced-command-docs.md)).
 `core/skill.rs` is the single source of the `SKILL.md` body — this doc references
 it, never duplicates (see [adr/009](../adr/009-skill-assembled-from-fields.md)).
+`core/platform.rs` (`#[cfg(target_os)]`: `default_bin_dir` + `exe_file_name`) is the
+sole home of per-OS path behavior outside the one `cfg!(windows)` PATH-split in
+`store::is_on_path` — see [design/17](17-cross-platform.md),
+[adr/012](../adr/012-cross-platform-paths.md).

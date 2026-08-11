@@ -1,26 +1,20 @@
 **example:**
 
 ```sh
-carpenter -c ds plan update pl1 --spec plan.json
+carpenter -c ds plan update pl1 --spec plan.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "title": "Data Structures — course plan",
-  "goals": [
-    "Know array/list internals",
-    "Implement a hash map from scratch"
-  ],
-  "links": {
-    "goal_index_0": [
-      "arrays-101"
-    ],
-    "goal_index_1": [
-      "hashing-101"
-    ]
-  }
-}
+```yaml
+title: "Data Structures — course plan"
+goals:
+  - Know array/list internals
+  - Implement a hash map from scratch
+links:
+  goal_index_0:
+    - arrays-101
+  goal_index_1:
+    - hashing-101
 ```
 
 Result (one envelope on stdout):

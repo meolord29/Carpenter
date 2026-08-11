@@ -1,6 +1,6 @@
 # LessonSpec
 
-Authored JSON consumed by `lesson create --spec -` / `lesson update --spec -`.
+Authored YAML consumed by `lesson create --spec -` / `lesson update --spec -`.
 
 <!-- BEGIN GENERATED -->
 | field | type | rule |
@@ -14,12 +14,59 @@ Authored JSON consumed by `lesson create --spec -` / `lesson update --spec -`.
 | cases[].args | array | default `[]` |
 | cases[].kwargs | object | default `{}` |
 | cases[].expected | any | required |
+| practice[]/quizzes[].solution | string? | **author reference solution** (Python defining the fn `name`); author-only — never rendered/shown to learner; verified by `lesson verify` ([adr/015](../adr/015-reference-solution-verify.md)) |
 
 **Checkable** (shared): `{name, signature, prompt?, cases[]}`. `expected` for a `sorted`/`set` case must be sortable/hashable else the case errors (`error:"unsortable"`/`"unhashable"`).
 
 Example:
 
-```json
-{"title":"Arrays 101","slug":"arrays-101","order":1,"sections":[{"title":"What is an array","snippets":[{"kind":"markdown","content":"An array stores items contiguously…"},{"kind":"code","content":"import numpy as np\nnp.array([1, 2, 3])"}],"practice":[{"name":"sum_array","signature":"def sum_array(arr):","prompt":"Return the sum of the array.","cases":[{"compare":"exact","args":[[1,2,3]],"kwargs":{},"expected":6},{"compare":"exact","args":[[]],"kwargs":{},"expected":0}]}]}],"quizzes":[{"name":"max_value","signature":"def max_value(arr):","prompt":"…","cases":[{"compare":"exact","args":[[3,1,2]],"kwargs":{},"expected":3}]}]}
+```yaml
+title: Arrays 101
+slug: arrays-101
+order: 1
+sections:
+  - title: What is an array
+    snippets: 
+      - kind: markdown
+        content: An array stores items contiguously…
+      - kind: code
+        content: |-
+          import numpy as np
+          np.array([1, 2, 3])
+    practice: 
+      - name: sum_array
+        signature: "def sum_array(arr):"
+        prompt: Return the sum of the array.
+        cases: 
+          - compare: exact
+            args: 
+              - 
+                - 1
+                - 2
+                - 3
+            kwargs: {}
+            expected: 6
+          - compare: exact
+            args: 
+              - []
+            kwargs: {}
+            expected: 0
+        solution: |
+          def sum_array(arr):
+              return sum(arr)
+
+quizzes:
+  - name: max_value
+    signature: "def max_value(arr):"
+    prompt: …
+    cases: 
+      - compare: exact
+        args: 
+          - 
+            - 3
+            - 1
+            - 2
+        kwargs: {}
+        expected: 3
 ```
 <!-- END GENERATED -->

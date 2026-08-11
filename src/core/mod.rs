@@ -14,3 +14,4 @@ pub mod skill;
 pub mod status;
 pub mod store;
 pub mod time;
+pub mod verify;

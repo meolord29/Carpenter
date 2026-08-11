@@ -12,8 +12,9 @@ reliable single source to generate the specs from.
 ## Decision
 `xtask gen-specs` generates every envelope/spec **table** in-place inside
 `docs/specs/*.md` (target state; see "Current status" below):
-- **spec inputs** (02–07) from the `*Spec` serde structs — serialize → example JSON
-  + a field table.
+- **spec inputs** (02–07) from the `*Spec` serde structs — serialize → example YAML
+  + a field table. ([adr/014](014-yaml-spec-input.md): specs are YAML-only; the
+  spec-input examples serialize via `serde_yml`, output-contract examples stay JSON.)
 - **output contracts** (08–19, 21, 22, 23) from the `Data` enum variants — serialize
   → the `data` column; the input/arg column comes from clap introspection (the same
   `///` surface adr/007 enforces).

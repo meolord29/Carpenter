@@ -1,6 +1,6 @@
 # CourseSpec
 
-Authored JSON consumed by `course create --spec -` / `course update --spec -`.
+Authored YAML consumed by `course create --spec -` / `course update --spec -`.
 
 <!-- BEGIN GENERATED -->
 | field | type | rule |
@@ -12,7 +12,10 @@ Authored JSON consumed by `course create --spec -` / `course update --spec -`.
 
 Example:
 
-```json
-{"title":"Data Structures","slug":"data-structures","goal":"Understand core data structures from the ground up","description":"…"}
+```yaml
+title: Data Structures
+slug: data-structures
+goal: Understand core data structures from the ground up
+description: …
 ```
 <!-- END GENERATED -->

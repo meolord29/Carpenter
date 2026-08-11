@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS practice (
   name         TEXT NOT NULL,
   signature    TEXT NOT NULL,
   prompt       TEXT NOT NULL DEFAULT '',
+  solution     TEXT NOT NULL DEFAULT '',
   ord          INTEGER NOT NULL,
   pass_or_fail INTEGER NOT NULL DEFAULT 0,
   last_check   TEXT NOT NULL DEFAULT '{}',
@@ -59,6 +60,7 @@ CREATE TABLE IF NOT EXISTS quizzes (
   name         TEXT NOT NULL,
   signature    TEXT NOT NULL,
   prompt       TEXT NOT NULL DEFAULT '',
+  solution     TEXT NOT NULL DEFAULT '',
   ord          INTEGER NOT NULL,
   pass_or_fail INTEGER NOT NULL DEFAULT 0,
   last_check   TEXT NOT NULL DEFAULT '{}',
@@ -121,7 +123,39 @@ pub fn open(path: &Path) -> Result<Connection, CarpenterError> {
     conn.execute_batch("PRAGMA foreign_keys = ON;")
         .map_err(store_msg)?;
     conn.execute_batch(SCHEMA).map_err(store_msg)?;
+    migrate(&conn)?;
     Ok(conn)
+}
+
+/// Does `table` have a column named `col`? (Used to gate idempotent migrations —
+/// SQLite has no `ADD COLUMN IF NOT EXISTS`.)
+fn has_column(conn: &Connection, table: &str, col: &str) -> Result<bool, CarpenterError> {
+    let mut stmt = conn
+        .prepare(&format!("PRAGMA table_info({table})"))
+        .map_err(store_msg)?;
+    let names: Vec<String> = stmt
+        .query_map([], |r| r.get::<_, String>(1))
+        .map_err(store_msg)?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(store_msg)?;
+    Ok(names.iter().any(|n| n == col))
+}
+
+/// Idempotent schema migrations for DBs created before a column existed. Each
+/// step guards on [`has_column`] so it is a no-op on current-schema DBs. Add a
+/// new step per schema change; never edit `SCHEMA` retroactively alone.
+fn migrate(conn: &Connection) -> Result<(), CarpenterError> {
+    // solution TEXT NOT NULL DEFAULT '' on practice + quizzes (adr/015).
+    for table in ["practice", "quizzes"] {
+        if !has_column(conn, table, "solution")? {
+            conn.execute(
+                &format!("ALTER TABLE {table} ADD COLUMN solution TEXT NOT NULL DEFAULT ''"),
+                [],
+            )
+            .map_err(store_msg)?;
+        }
+    }
+    Ok(())
 }
 
 /// Insert a course_meta row.
@@ -517,6 +551,8 @@ pub struct CheckableDb {
     pub signature: String,
     /// prompt.
     pub prompt: String,
+    /// author reference solution (empty = none). Author-only; never rendered.
+    pub solution: String,
     /// order.
     pub ord: i64,
     /// skip flag.
@@ -767,7 +803,7 @@ pub fn list_sections(conn: &Connection, lesson_id: &str) -> Result<Vec<SectionDb
     Ok(rows)
 }
 
-const CHECKABLE_COLS: &str = "id,name,signature,prompt,ord,skip,pass_or_fail,last_check";
+const CHECKABLE_COLS: &str = "id,name,signature,prompt,solution,ord,skip,pass_or_fail,last_check";
 
 /// List practice items of a section, ordered by `ord`.
 pub fn list_practice(
@@ -787,6 +823,7 @@ pub fn list_practice(
 }
 
 /// Insert a practice row.
+#[allow(clippy::too_many_arguments)]
 pub fn insert_practice(
     conn: &Connection,
     id: &str,
@@ -794,12 +831,13 @@ pub fn insert_practice(
     name: &str,
     signature: &str,
     prompt: &str,
+    solution: &str,
     ord: i64,
 ) -> Result<(), CarpenterError> {
     conn.execute(
-        "INSERT INTO practice (id,section_id,name,signature,prompt,ord,pass_or_fail,last_check,skip) \
-         VALUES (?1,?2,?3,?4,?5,?6,0,'{}',0)",
-        params![id, section_id, name, signature, prompt, ord],
+        "INSERT INTO practice (id,section_id,name,signature,prompt,solution,ord,pass_or_fail,last_check,skip) \
+         VALUES (?1,?2,?3,?4,?5,?6,?7,0,'{}',0)",
+        params![id, section_id, name, signature, prompt, solution, ord],
     )
     .map_err(store_msg)?;
     Ok(())
@@ -823,6 +861,7 @@ pub fn list_quizzes(
 }
 
 /// Insert a quiz row.
+#[allow(clippy::too_many_arguments)]
 pub fn insert_quiz(
     conn: &Connection,
     id: &str,
@@ -830,12 +869,13 @@ pub fn insert_quiz(
     name: &str,
     signature: &str,
     prompt: &str,
+    solution: &str,
     ord: i64,
 ) -> Result<(), CarpenterError> {
     conn.execute(
-        "INSERT INTO quizzes (id,lesson_id,name,signature,prompt,ord,pass_or_fail,last_check,skip) \
-         VALUES (?1,?2,?3,?4,?5,?6,0,'{}',0)",
-        params![id, lesson_id, name, signature, prompt, ord],
+        "INSERT INTO quizzes (id,lesson_id,name,signature,prompt,solution,ord,pass_or_fail,last_check,skip) \
+         VALUES (?1,?2,?3,?4,?5,?6,?7,0,'{}',0)",
+        params![id, lesson_id, name, signature, prompt, solution, ord],
     )
     .map_err(store_msg)?;
     Ok(())
@@ -847,10 +887,11 @@ fn checkable_mapper(r: &rusqlite::Row) -> rusqlite::Result<CheckableDb> {
         name: r.get(1)?,
         signature: r.get(2)?,
         prompt: r.get(3)?,
-        ord: r.get(4)?,
-        skip: r.get::<_, i64>(5)? != 0,
-        pass_or_fail: r.get::<_, i64>(6)? != 0,
-        last_check: r.get(7)?,
+        solution: r.get(4)?,
+        ord: r.get(5)?,
+        skip: r.get::<_, i64>(6)? != 0,
+        pass_or_fail: r.get::<_, i64>(7)? != 0,
+        last_check: r.get(8)?,
     })
 }
 
@@ -1277,8 +1318,8 @@ mod tests {
         let conn = open(&tmp_db()).expect("open");
         insert_lesson(&conn, "l1", "l1", "L", 1, "t0", "t0").expect("lesson");
         insert_section(&conn, "s1", "l1", "S", "[]", 0).expect("section");
-        insert_practice(&conn, "p1", "s1", "f", "def f():", "", 0).expect("practice");
-        insert_quiz(&conn, "q1", "l1", "g", "def g():", "", 0).expect("quiz");
+        insert_practice(&conn, "p1", "s1", "f", "def f():", "", "", 0).expect("practice");
+        insert_quiz(&conn, "q1", "l1", "g", "def g():", "", "", 0).expect("quiz");
         assert_eq!(practice_lesson_id(&conn, "p1").expect("owner"), "l1");
         assert_eq!(get_practice(&conn, "p1").expect("get").name, "f");
         assert!(matches!(
@@ -1349,8 +1390,8 @@ mod tests {
     fn quiz_and_note_rollups() {
         let conn = open(&tmp_db()).expect("open");
         insert_lesson(&conn, "l1", "l1", "L", 1, "t0", "t0").expect("lesson");
-        insert_quiz(&conn, "q1", "l1", "g", "def g():", "", 0).expect("quiz");
-        insert_quiz(&conn, "q2", "l1", "g", "def g():", "", 1).expect("quiz");
+        insert_quiz(&conn, "q1", "l1", "g", "def g():", "", "", 0).expect("quiz");
+        insert_quiz(&conn, "q2", "l1", "g", "def g():", "", "", 1).expect("quiz");
         // q1 passes, q2 skipped — skipped is excluded from the roll-up.
         conn.execute("UPDATE quizzes SET pass_or_fail=1 WHERE id='q1'", [])
             .unwrap();

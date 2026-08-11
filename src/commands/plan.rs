@@ -59,7 +59,7 @@ pub fn create(
     course_slug: &str,
     scope: &str,
     lesson: Option<&str>,
-    spec_json: &str,
+    spec_text: &str,
 ) -> Result<Data, CarpenterError> {
     let scope_id = match scope {
         "course" => {
@@ -86,7 +86,7 @@ pub fn create(
             )))
         }
     };
-    let spec: PlanSpec = store::parse_spec(spec_json)?;
+    let spec: PlanSpec = store::parse_spec(spec_text)?;
     validate_plan_spec(&spec)?;
     let conn = db::open_course(paths, course_slug)?;
     let id = db::next_id(&conn, "plans", "pl")?;
@@ -198,7 +198,7 @@ pub fn update(
     paths: &Paths,
     course_slug: &str,
     id: &str,
-    spec_json: &str,
+    spec_text: &str,
 ) -> Result<Data, CarpenterError> {
     let conn = db::open_course(paths, course_slug)?;
     let row = db::get_plan(&conn, id)?;
@@ -207,7 +207,7 @@ pub fn update(
             "cannot update confirmed plan {id}"
         )));
     }
-    let spec: PlanSpec = store::parse_spec(spec_json)?;
+    let spec: PlanSpec = store::parse_spec(spec_text)?;
     validate_plan_spec(&spec)?;
     let content = encode_content(&spec);
     db::replace_plan(&conn, id, &spec.title, &content)?;
@@ -252,7 +252,7 @@ mod tests {
     use crate::commands::testutil;
     use crate::models::Data;
 
-    const SPEC: &str = r#"{"title":"DS plan","goals":["goal a","goal b"],"links":{}}"#;
+    const SPEC: &str = "title: DS plan\ngoals:\n  - goal a\n  - goal b\nlinks: {}\n";
 
     fn plan_id(data: &Data) -> String {
         match data {
@@ -280,7 +280,7 @@ mod tests {
         crate::commands::lesson::create(
             &paths,
             &slug,
-            r##"{"title":"Arrays","slug":"arrays","sections":[{"title":"s","snippets":[{"kind":"markdown","content":"hi"}]}],"quizzes":[]}"##,
+            "title: Arrays\nslug: arrays\nsections:\n  - title: s\n    snippets:\n      - kind: markdown\n        content: hi\nquizzes: []\n",
         )
         .expect("create lesson");
         let data = create(&paths, &slug, "lesson", Some("arrays"), SPEC).expect("create");
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn create_rejects_bad_link_index() {
         let (paths, slug) = testutil::setup();
-        let bad = r#"{"title":"t","goals":["only"],"links":{"goal_index_3":["x"]}}"#;
+        let bad = "title: t\ngoals: [only]\nlinks:\n  goal_index_3: [x]\n";
         let err = create(&paths, &slug, "course", None, bad).unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
     }
@@ -370,7 +370,7 @@ mod tests {
         crate::commands::lesson::create(
             &paths,
             &slug,
-            r##"{"title":"Arrays","slug":"arrays","sections":[{"title":"s","snippets":[{"kind":"markdown","content":"hi"}]}],"quizzes":[]}"##,
+            "title: Arrays\nslug: arrays\nsections:\n  - title: s\n    snippets:\n      - kind: markdown\n        content: hi\nquizzes: []\n",
         )
         .unwrap();
         let id = plan_id(&create(&paths, &slug, "lesson", Some("arrays"), SPEC).unwrap());
@@ -391,13 +391,7 @@ mod tests {
         let (paths, slug) = testutil::setup();
         let id = plan_id(&create(&paths, &slug, "course", None, SPEC).unwrap());
         assert!(matches!(
-            update(
-                &paths,
-                &slug,
-                &id,
-                r#"{"title":"t2","goals":[],"links":{}}"#
-            )
-            .expect("update"),
+            update(&paths, &slug, &id, "title: t2\ngoals: []\nlinks: {}\n").expect("update"),
             Data::PlanUpdate { .. }
         ));
     }

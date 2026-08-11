@@ -219,7 +219,7 @@ fn spec_arg() -> Arg {
         .long("spec")
         .value_name("FILE|-")
         .required(true)
-        .help("Spec input: a file path or - for stdin.")
+        .help("Spec input: a file path or - for stdin (YAML).")
 }
 
 fn lesson_group() -> Command {
@@ -278,6 +278,40 @@ fn lesson_group() -> Command {
                         .help(
                             "Run every cell; return all errors instead of aborting on the first.",
                         ),
+                ),
+        )
+        .subcommand(
+            Command::new("verify")
+                .about("Verify author solutions against their own cases (answer-key lock).")
+                .arg(
+                    Arg::new("id")
+                        .required(false)
+                        .help("Lesson id (--spec mode omits it)."),
+                )
+                .arg(
+                    Arg::new("spec")
+                        .long("spec")
+                        .value_name("FILE|-")
+                        .required(false)
+                        .help("Pre-create verify: spec input (file or - for stdin, YAML)."),
+                )
+                .arg(
+                    Arg::new("timeout")
+                        .long("timeout")
+                        .value_name("SECS")
+                        .default_value("30")
+                        .help("Per-case timeout."),
+                ),
+        )
+        .subcommand(
+            Command::new("new")
+                .about("Emit a YAML lesson-spec template (stdout, or --out <FILE>).")
+                .arg(
+                    Arg::new("out")
+                        .long("out")
+                        .value_name("FILE")
+                        .required(false)
+                        .help("Write to a file instead of stdout."),
                 ),
         )
 }
@@ -512,10 +546,18 @@ pub fn run() -> ExitCode {
             Ok(course) => emit(goal_cmd(&paths, &course, sub)),
             Err(e) => emit(Err(e)),
         },
-        Some(("lesson", sub)) => match active_course(&paths, &matches) {
-            Ok(course) => emit(lesson_cmd(&paths, &course, sub)),
-            Err(e) => emit(Err(e)),
-        },
+        Some(("lesson", sub)) => {
+            // `lesson new` is course-agnostic (pure template emitter); skip
+            // course resolution so it works without `-c`/active_course.
+            if sub.subcommand_name() == Some("new") {
+                emit(lesson_cmd(&paths, "", sub))
+            } else {
+                match active_course(&paths, &matches) {
+                    Ok(course) => emit(lesson_cmd(&paths, &course, sub)),
+                    Err(e) => emit(Err(e)),
+                }
+            }
+        }
         Some(("quiz", sub)) => match active_course(&paths, &matches) {
             Ok(course) => emit(quiz_cmd(&paths, &course, sub)),
             Err(e) => emit(Err(e)),
@@ -703,6 +745,7 @@ fn lesson_cmd(
             let spec = core::store::read_spec(&arg_string(m, "spec"))?;
             commands::lesson::create(paths, course, &spec)
         }
+        Some(("new", m)) => commands::lesson::new(m.get_one::<String>("out").map(|s| s.as_str())),
         Some(("get", m)) => commands::lesson::get(paths, course, &arg_string(m, "id")),
         Some(("list", _)) => commands::lesson::list(paths, course),
         Some(("show", m)) => commands::lesson::show(paths, course, &arg_string(m, "id")),
@@ -733,6 +776,25 @@ fn lesson_cmd(
                 &arg_string(m, "id"),
                 timeout,
                 m.get_flag("allow-errors"),
+            )
+        }
+        Some(("verify", m)) => {
+            let id = arg_string(m, "id");
+            let spec = m
+                .get_one::<String>("spec")
+                .map(|s| s.as_str())
+                .map(core::store::read_spec)
+                .transpose()?;
+            let timeout = m
+                .get_one::<String>("timeout")
+                .and_then(|s| s.parse::<u64>().ok())
+                .unwrap_or(30);
+            commands::lesson::verify(
+                paths,
+                course,
+                if id.is_empty() { None } else { Some(&id) },
+                spec.as_deref(),
+                timeout,
             )
         }
         _ => Err(core::error::CarpenterError::ValidationError(format!(

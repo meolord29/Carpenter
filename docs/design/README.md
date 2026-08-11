@@ -21,5 +21,7 @@ material. SQLite is the source of truth; notebooks render from it. Read in order
 | 14 | [build-order.md](14-build-order.md) | phased build plan |
 | 15 | [opencode-integration.md](15-opencode-integration.md) | skill-based agent-app integration (register/deregister) |
 | 16 | [execution.md](16-execution.md) | course venv (uv) + lesson execute + venv-backed quiz run |
+| 17 | [cross-platform.md](17-cross-platform.md) | Linux/macOS/Windows paths, platform module, CI matrix |
+| 18 | [scenarios.md](18-scenarios.md) | multi-command scenario examples (gated, howto+skill-inlined) |
 
 See also: [data-model/](../data-model/), [specs/](../specs/), [adr/](../adr/).

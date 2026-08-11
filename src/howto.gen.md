@@ -36,22 +36,20 @@ _flags: none_
 
 Create a course from a spec.
 
-- `--spec <FILE|->` — Spec input: a file path or - for stdin.
+- `--spec <FILE|->` — Spec input: a file path or - for stdin (YAML).
 
 **example:**
 
 ```sh
-carpenter course create --spec course.json
+carpenter course create --spec course.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "title": "Data Structures",
-  "slug": "data-structures",
-  "goal": "Understand core data structures from the ground up",
-  "description": "Arrays, lists, hashing, trees."
-}
+```yaml
+title: Data Structures
+slug: data-structures
+goal: Understand core data structures from the ground up
+description: Arrays, lists, hashing, trees.
 ```
 
 Result (one envelope on stdout):
@@ -97,23 +95,21 @@ Result (one envelope on stdout):
 
 Update a course from a spec (requires --force).
 
-- `--spec <FILE|->` — Spec input: a file path or - for stdin.
+- `--spec <FILE|->` — Spec input: a file path or - for stdin (YAML).
 - `--force` — Confirm the destructive operation.
 
 **example:**
 
 ```sh
-carpenter course update data-structures --spec course.json --force
+carpenter course update data-structures --spec course.yaml --force
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "title": "Data Structures",
-  "slug": "data-structures",
-  "goal": "Understand core data structures from the ground up",
-  "description": "Arrays, lists, hashing, trees."
-}
+```yaml
+title: Data Structures
+slug: data-structures
+goal: Understand core data structures from the ground up
+description: Arrays, lists, hashing, trees.
 ```
 
 Result (one envelope on stdout):
@@ -169,31 +165,25 @@ Create a plan draft from a spec.
 
 - `--scope` — Plan scope.
 - `--lesson <ID>` — Lesson id (required for --scope lesson).
-- `--spec <FILE|->` — Spec input: a file path or - for stdin.
+- `--spec <FILE|->` — Spec input: a file path or - for stdin (YAML).
 
 **example:**
 
 ```sh
-carpenter -c ds plan create --scope course --spec plan.json
+carpenter -c ds plan create --scope course --spec plan.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "title": "Data Structures — course plan",
-  "goals": [
-    "Know array/list internals",
-    "Implement a hash map from scratch"
-  ],
-  "links": {
-    "goal_index_0": [
-      "arrays-101"
-    ],
-    "goal_index_1": [
-      "hashing-101"
-    ]
-  }
-}
+```yaml
+title: "Data Structures — course plan"
+goals:
+  - Know array/list internals
+  - Implement a hash map from scratch
+links:
+  goal_index_0:
+    - arrays-101
+  goal_index_1:
+    - hashing-101
 ```
 
 Result (one envelope on stdout):
@@ -262,31 +252,25 @@ Course scope materializes one goal per `goals[]` entry (ids resolved now); lesso
 
 Update a plan from a spec.
 
-- `--spec <FILE|->` — Spec input: a file path or - for stdin.
+- `--spec <FILE|->` — Spec input: a file path or - for stdin (YAML).
 
 **example:**
 
 ```sh
-carpenter -c ds plan update pl1 --spec plan.json
+carpenter -c ds plan update pl1 --spec plan.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "title": "Data Structures — course plan",
-  "goals": [
-    "Know array/list internals",
-    "Implement a hash map from scratch"
-  ],
-  "links": {
-    "goal_index_0": [
-      "arrays-101"
-    ],
-    "goal_index_1": [
-      "hashing-101"
-    ]
-  }
-}
+```yaml
+title: "Data Structures — course plan"
+goals:
+  - Know array/list internals
+  - Implement a hash map from scratch
+links:
+  goal_index_0:
+    - arrays-101
+  goal_index_1:
+    - hashing-101
 ```
 
 Result (one envelope on stdout):
@@ -325,22 +309,19 @@ _flags: none_
 
 Add a goal from a spec.
 
-- `--spec <FILE|->` — Spec input: a file path or - for stdin.
+- `--spec <FILE|->` — Spec input: a file path or - for stdin (YAML).
 
 **example:**
 
 ```sh
-carpenter -c ds goal add --spec goal.json
+carpenter -c ds goal add --spec goal.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "text": "Implement a hash map from scratch",
-  "covered_by": [
-    "hashing-101"
-  ]
-}
+```yaml
+text: Implement a hash map from scratch
+covered_by:
+  - hashing-101
 ```
 
 Result (one envelope on stdout):
@@ -414,77 +395,47 @@ _flags: none_
 
 Create a lesson from a spec (renders notebook + helper).
 
-- `--spec <FILE|->` — Spec input: a file path or - for stdin.
+- `--spec <FILE|->` — Spec input: a file path or - for stdin (YAML).
 
 **example:**
 
 ```sh
-carpenter -c ds lesson create --spec lesson.json
+carpenter -c ds lesson create --spec lesson.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "title": "Arrays 101",
-  "slug": "arrays-101",
-  "sections": [
-    {
-      "title": "What is an array",
-      "snippets": [
-        {
-          "kind": "markdown",
-          "content": "An array stores items contiguously…"
-        },
-        {
-          "kind": "code",
-          "content": "import numpy as np\nnp.array([1, 2, 3])"
-        }
-      ],
-      "practice": [
-        {
-          "name": "sum_array",
-          "signature": "def sum_array(arr):",
-          "prompt": "Return the sum of the array.",
-          "cases": [
-            {
-              "compare": "exact",
-              "args": [
-                [
-                  1,
-                  2,
-                  3
-                ]
-              ],
-              "kwargs": {},
-              "expected": 6
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "quizzes": [
-    {
-      "name": "max_value",
-      "signature": "def max_value(arr):",
-      "prompt": "Return the max.",
-      "cases": [
-        {
-          "compare": "exact",
-          "args": [
-            [
-              3,
-              1,
-              2
-            ]
-          ],
-          "kwargs": {},
-          "expected": 3
-        }
-      ]
-    }
-  ]
-}
+```yaml
+title: Arrays 101
+slug: arrays-101
+sections:
+  - title: What is an array
+    snippets:
+      - kind: markdown
+        content: An array stores items contiguously…
+      - kind: code
+        content: |
+          import numpy as np
+          np.array([1, 2, 3])
+    practice:
+      - name: sum_array
+        signature: "def sum_array(arr):"
+        prompt: Return the sum of the array.
+        cases:
+          - compare: exact
+            args:
+              - [1, 2, 3]
+            kwargs: {}
+            expected: 6
+quizzes:
+  - name: max_value
+    signature: "def max_value(arr):"
+    prompt: Return the max.
+    cases:
+      - compare: exact
+        args:
+          - [3, 1, 2]
+        kwargs: {}
+        expected: 3
 ```
 
 Result (one envelope on stdout):
@@ -551,78 +502,48 @@ Result (one envelope on stdout):
 
 Update a lesson from a spec (requires --force).
 
-- `--spec <FILE|->` — Spec input: a file path or - for stdin.
+- `--spec <FILE|->` — Spec input: a file path or - for stdin (YAML).
 - `--force` — Confirm the destructive operation.
 
 **example:**
 
 ```sh
-carpenter -c ds lesson update arrays-101 --spec lesson.json --force
+carpenter -c ds lesson update arrays-101 --spec lesson.yaml --force
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "title": "Arrays 101",
-  "slug": "arrays-101",
-  "sections": [
-    {
-      "title": "What is an array",
-      "snippets": [
-        {
-          "kind": "markdown",
-          "content": "An array stores items contiguously…"
-        },
-        {
-          "kind": "code",
-          "content": "import numpy as np\nnp.array([1, 2, 3])"
-        }
-      ],
-      "practice": [
-        {
-          "name": "sum_array",
-          "signature": "def sum_array(arr):",
-          "prompt": "Return the sum of the array.",
-          "cases": [
-            {
-              "compare": "exact",
-              "args": [
-                [
-                  1,
-                  2,
-                  3
-                ]
-              ],
-              "kwargs": {},
-              "expected": 6
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "quizzes": [
-    {
-      "name": "max_value",
-      "signature": "def max_value(arr):",
-      "prompt": "Return the max.",
-      "cases": [
-        {
-          "compare": "exact",
-          "args": [
-            [
-              3,
-              1,
-              2
-            ]
-          ],
-          "kwargs": {},
-          "expected": 3
-        }
-      ]
-    }
-  ]
-}
+```yaml
+title: Arrays 101
+slug: arrays-101
+sections:
+  - title: What is an array
+    snippets:
+      - kind: markdown
+        content: An array stores items contiguously…
+      - kind: code
+        content: |
+          import numpy as np
+          np.array([1, 2, 3])
+    practice:
+      - name: sum_array
+        signature: "def sum_array(arr):"
+        prompt: Return the sum of the array.
+        cases:
+          - compare: exact
+            args:
+              - [1, 2, 3]
+            kwargs: {}
+            expected: 6
+quizzes:
+  - name: max_value
+    signature: "def max_value(arr):"
+    prompt: Return the max.
+    cases:
+      - compare: exact
+        args:
+          - [3, 1, 2]
+        kwargs: {}
+        expected: 3
 ```
 
 Result (one envelope on stdout):
@@ -687,6 +608,105 @@ Result (one envelope on stdout):
 ```
 
 Requires the course venv (`carpenter venv create`) else StoreError. `--allow-errors` runs every cell and returns all errors instead of aborting on the first.
+
+### verify
+
+Verify author solutions against their own cases (answer-key lock).
+
+- `--spec <FILE|->` — Pre-create verify: spec input (file or - for stdin, YAML).
+- `--timeout <SECS>` — Per-case timeout.
+
+**example:**
+
+```sh
+carpenter -c ds lesson verify --spec -
+```
+
+Input spec (`--spec <FILE|->`, JSON or YAML). Each Checkable may carry a
+`solution` — Python source defining the fn named `name`. `lesson verify` runs
+each solution against its own cases in the course venv (the answer-key lock).
+```yaml
+title: Arrays 101
+slug: arrays-101
+sections:
+  - title: Intro
+    snippets:
+      - kind: markdown
+        content: "# hi"
+    practice:
+      - name: sum_array
+        signature: "def sum_array(arr):"
+        solution: |
+          def sum_array(arr):
+              return sum(arr)
+        cases:
+          - compare: exact
+            args:
+              - [1, 2, 3]
+            kwargs: {}
+            expected: 6
+quizzes: []
+```
+
+Result (one envelope on stdout):
+```json
+{"status":"ok","message":"lesson verified: (spec)","data":{"lesson_id":null,"checked":1,"passing":1,"failing":0,"checkables":[{"owner_type":"practice","owner_id":"sum_array","name":"sum_array","has_solution":true,"passed":1,"total":1,"cases":[{"case_id":"sum_array-0","passed":true}]}]}}
+```
+
+`--spec` verifies pre-create (`lesson_id:null`, `owner_id` = fn `name`); `<id>`
+re-verifies stored solutions post-create (`owner_id` = `p1`/`q1`…). Requires
+`carpenter venv create`. A checkable without a `solution` reports
+`has_solution:false`; its cases fail with `error:"no solution"`. Results carry
+`actual`/`error`, never `expected` (adr/015).
+
+### new
+
+Emit a YAML lesson-spec template (stdout, or --out <FILE>).
+
+- `--out <FILE>` — Write to a file instead of stdout.
+
+**example:**
+
+```sh
+carpenter lesson new --out lesson.yaml
+```
+
+No course context required (`-c` omitted). Prints a YAML template to stdout by
+default; `--out <FILE>` writes it. Block scalars (`|`) keep multi-line
+`content`/`solution` as-is (no `\n` escaping); signatures are quoted (they end
+in `:`).
+```yaml
+title: <lesson title>
+slug: <lesson-slug>          # optional; derived from title if omitted
+sections:
+  - title: <section title>
+    snippets:
+      - kind: markdown
+        content: |
+          ## Heading
+          Prose here.
+    practice:
+      - name: <fn_name>
+        signature: "def <fn_name>(x):"
+        solution: |
+          def <fn_name>(x):
+              return x
+        cases:
+          - compare: exact
+            args: [1]
+            expected: 1
+quizzes: []
+```
+
+Result (one envelope on stdout):
+```json
+{"status":"ok","message":"lesson template written: lesson.yaml","data":{"written_to":"lesson.yaml"}}
+```
+
+Edit the template, then `carpenter -c <slug> lesson verify --spec lesson.yaml`
+to lock the keys, and `carpenter -c <slug> lesson create --spec lesson.yaml` to
+render it. Print mode (`carpenter lesson new`) returns the YAML in
+`data.yaml` instead of `data.written_to`.
 
 ## quiz
 
@@ -920,25 +940,22 @@ _flags: none_
 
 Add a note from a spec.
 
-- `--spec <FILE|->` — Spec input: a file path or - for stdin.
+- `--spec <FILE|->` — Spec input: a file path or - for stdin (YAML).
 
 **example:**
 
 ```sh
-carpenter -c ds notes add --spec note.json
+carpenter -c ds notes add --spec note.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "kind": "gap",
-  "tags": [
-    "recursion"
-  ],
-  "recurrence": "new",
-  "related": "q2",
-  "text": "Learner struggles with base cases."
-}
+```yaml
+kind: gap
+tags:
+  - recursion
+recurrence: new
+related: q2
+text: Learner struggles with base cases.
 ```
 
 Result (one envelope on stdout):
@@ -986,25 +1003,22 @@ Result (one envelope on stdout):
 
 Update a note from a spec.
 
-- `--spec <FILE|->` — Spec input: a file path or - for stdin.
+- `--spec <FILE|->` — Spec input: a file path or - for stdin (YAML).
 
 **example:**
 
 ```sh
-carpenter -c ds notes update n1 --spec note.json
+carpenter -c ds notes update n1 --spec note.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "kind": "gap",
-  "tags": [
-    "recursion"
-  ],
-  "recurrence": "new",
-  "related": "q2",
-  "text": "Learner struggles with base cases."
-}
+```yaml
+kind: gap
+tags:
+  - recursion
+recurrence: new
+related: q2
+text: Learner struggles with base cases.
 ```
 
 Result (one envelope on stdout):
@@ -1056,21 +1070,19 @@ _flags: none_
 
 File a bug from a spec.
 
-- `--spec <FILE|->` — Spec input: a file path or - for stdin.
+- `--spec <FILE|->` — Spec input: a file path or - for stdin (YAML).
 
 **example:**
 
 ```sh
-carpenter bug file --spec bug.json
+carpenter bug file --spec bug.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "title": "quiz run ignores --timeout",
-  "description": "The timeout flag has no effect.",
-  "repro": "carpenter quiz run 01 …"
-}
+```yaml
+title: "quiz run ignores --timeout"
+description: The timeout flag has no effect.
+repro: "carpenter quiz run 01 …"
 ```
 
 Result (one envelope on stdout):
@@ -1141,21 +1153,19 @@ _flags: none_
 
 File a feature request from a spec.
 
-- `--spec <FILE|->` — Spec input: a file path or - for stdin.
+- `--spec <FILE|->` — Spec input: a file path or - for stdin (YAML).
 
 **example:**
 
 ```sh
-carpenter feature file --spec feature.json
+carpenter feature file --spec feature.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "title": "add dark mode",
-  "description": "Users ask for a dark theme.",
-  "rationale": "frequent user request"
-}
+```yaml
+title: add dark mode
+description: Users ask for a dark theme.
+rationale: frequent user request
 ```
 
 Result (one envelope on stdout):
@@ -1275,7 +1285,7 @@ carpenter register --app opencode
 
 Result (one envelope on stdout):
 ```json
-{"status":"ok","message":"skill registered: opencode","data":{"app":"opencode","path":"/…/opencode/skills/carpenter/SKILL.md","version":"0.1.0","installed":true}}
+{"status":"ok","message":"skill registered: opencode","data":{"app":"opencode","path":"/…/opencode/skills/carpenter/SKILL.md","version":"0.5.0","installed":true}}
 ```
 
 Writes `SKILL.md` + merges the `permission.skill.carpenter="allow"` entry. `--print-skill` prints the rendered bytes instead (no FS change).
@@ -1353,7 +1363,7 @@ carpenter upgrade --source /src/carpenter --bin-dir ~/.local/bin
 
 Result (one envelope on stdout):
 ```json
-{"status":"ok","message":"upgraded: 0.1.0","data":{"upgraded":true,"version":"0.1.0","bin":"/home/u/.local/bin/carpenter","source":"/src/carpenter","skill":{"refreshed":true,"app":"opencode","path":"/home/u/.config/opencode/skills/carpenter/SKILL.md"}}}
+{"status":"ok","message":"upgraded: 0.5.0","data":{"upgraded":true,"version":"0.5.0","bin":"/home/u/.local/bin/carpenter","source":"/src/carpenter","skill":{"refreshed":true,"app":"opencode","path":"/home/u/.config/opencode/skills/carpenter/SKILL.md"}}}
 ```
 
 Rebuilds from source, replaces the binary, and re-renders the registered skill. `--no-skill` skips the skill refresh (`skill:null`).
@@ -1378,8 +1388,181 @@ carpenter link register
 
 Result (one envelope on stdout):
 ```json
-{"status":"ok","message":"link manifest emitted","data":{"name":"carpenter","version":"0.1.0","bin":"/…/carpenter","summary":"Agent-driven CLI that builds Python/Jupyter learning material.","howto_excerpt":"Run `carpenter howto` for the full, always-current command manual.","commands":["course","lesson","plan","quiz","howto"]}}
+{"status":"ok","message":"link manifest emitted","data":{"name":"carpenter","version":"0.5.0","bin":"/…/carpenter","summary":"Agent-driven CLI that builds Python/Jupyter learning material.","howto_excerpt":"Run `carpenter howto` for the full, always-current command manual.","commands":["course","lesson","plan","quiz","howto"]}}
 ```
 
 Future CLI registry manifest. Read-only emit.
+
+## Scenarios
+
+Multi-command workflows composed toward one goal ([adr/013](../docs/adr/013-compile-enforced-scenarios.md)). These are **illustrative examples**: every filename, slug, and path (including `<root>/…`) is a placeholder pattern to adapt — none exist on disk; do not read, create, or navigate to them.
+
+### Build a course end-to-end
+
+A canonical agent workflow: scaffold a course, set goals and link them to
+covering lessons, author one lesson, verify it runs, score the fresh notebook,
+and roll up progress. Running example: a computational-linear-algebra course
+(`linalg-for-ml`). Repeat the `lesson create` step for each lesson in the outline.
+
+The fenced ` ```sh ` blocks below are the real flow; the ` ```yaml ` blocks are
+the specs and the ` ```json ` blocks are the result envelopes. (Only the `sh`
+blocks are counted by the compile-time scenario gate — see
+`docs/adr/013-compile-enforced-scenarios.md`.)
+
+#### 1. Scaffold the course
+
+```sh
+carpenter course create --spec <course-spec>.yaml
+```
+
+`<course-spec>.yaml`:
+```yaml
+title: Computational Linear Algebra for ML
+slug: linalg-for-ml
+goal: Build ML-ready linear-algebra intuition from vectors to SVD
+description: Vectors, matrices, systems, decompositions, and ML applications.
+```
+```json
+{"status":"ok","message":"course created: linalg-for-ml","data":{"slug":"linalg-for-ml","title":"Computational Linear Algebra for ML","path":"<root>/courses/linalg-for-ml"}}
+```
+
+#### 2. Create the venv and add deps
+
+Required before `lesson execute` / `quiz run` (uses `uv`).
+
+```sh
+carpenter -c linalg-for-ml venv create --python 3.12
+carpenter -c linalg-for-ml venv add numpy
+```
+
+#### 3. Set goals and link covering lessons
+
+```sh
+carpenter -c linalg-for-ml plan create --scope course --spec <plan-spec>.yaml
+carpenter -c linalg-for-ml plan confirm pl1
+```
+
+`<plan-spec>.yaml` (`links` keys MUST be `goal_index_<i>` — the 0-based index into `goals[]`):
+```yaml
+title: "Computational Linear Algebra for ML — Learning Goals"
+goals:
+  - Represent vectors and matrices in NumPy and compute products.
+  - Solve linear systems via elimination and LU.
+  - Apply eigenvalues, eigenvectors, and the SVD.
+  - Apply linear algebra to ML: regression, PCA, nets, classification.
+links:
+  goal_index_0: [vectors-refresher, matrices-refresher]
+  goal_index_1: [systems-and-elimination, lu-decomposition]
+  goal_index_2: [determinants-and-eigenvectors, svd]
+  goal_index_3: [ml-linear-regression, ml-pca, ml-neural-network]
+```
+```json
+{"status":"ok","message":"plan confirmed: pl1","data":{"id":"pl1","confirmed":true,"goals_created":["g1","g2","g3","g4"]}}
+```
+
+#### 4. Author a lesson (renders notebook + verification-only helper)
+
+```sh
+carpenter -c linalg-for-ml lesson create --spec <lesson-spec>.yaml
+```
+
+`<lesson-spec>.yaml` — a minimal one-section lesson (the full spec shape lives at
+`docs/examples/lesson/create.md`):
+```yaml
+title: "Vectors: A Computational Refresher"
+slug: vectors-refresher
+sections:
+  - title: The dot product
+    snippets:
+      - kind: markdown
+        content: |
+          ## The dot product
+
+          $$\vec{x}\cdot\vec{y} = \sum_i x_i y_i$$
+      - kind: code
+        content: |
+          import numpy as np
+          print(np.dot([1,2,3],[4,5,6]))
+    practice:
+      - name: dot_product
+        signature: "def dot_product(a, b):"
+        prompt: Return the dot product of a and b as a Python float (use np.dot, then float()).
+        cases:
+          - compare: exact
+            args:
+              - [1, 2, 3]
+              - [4, 5, 6]
+            kwargs: {}
+            expected: 32
+quizzes:
+  - name: dot_sign
+    signature: "def dot_sign(a, b):"
+    prompt: Return 1 if dot(a,b)>0, -1 if <0, 0 if ==0.
+    cases:
+      - compare: exact
+        args:
+          - [1, 2]
+          - [3, 4]
+        kwargs: {}
+        expected: 1
+```
+```json
+{"status":"ok","message":"lesson created: vectors-refresher","data":{"id":"vectors-refresher","slug":"vectors-refresher","path":"<root>/courses/linalg-for-ml/lessons/01-vectors-refresher","counts":{"sections":1,"practice":1,"quizzes":1,"cases":2}}}
+```
+
+#### 5. Verify the teaching cells run clean
+
+Stubs only `raise` at call time, so `--allow-errors` reports `errored:0` on a
+freshly rendered notebook (practice/quiz cells define functions; they don't
+raise at definition time).
+
+```sh
+carpenter -c linalg-for-ml lesson execute vectors-refresher --allow-errors
+```
+```json
+{"status":"ok","message":"lesson executed: vectors-refresher","data":{"id":"vectors-refresher","executed":true,"cells":{"total":7,"ran":7,"errored":0},"errors":[]}}
+```
+
+#### 6. Score the fresh notebook
+
+Empty stubs → every quiz fails with `NotImplementedError` — the expected fresh
+state. The helper catches the exception and records `pass_or_fail:false`; no cell
+error is raised.
+
+```sh
+carpenter -c linalg-for-ml quiz run vectors-refresher
+```
+```json
+{"status":"ok","message":"quizzes run: vectors-refresher","data":{"lesson_id":"vectors-refresher","quizzes":[{"quiz_id":"q1","skipped":false,"pass_or_fail":false,"passed":0,"total":1,"cases":[{"case_id":"c1","passed":false,"error":"NotImplementedError: "}]}],"saved":true}}
+```
+
+#### 7. Roll up progress
+
+```sh
+carpenter -c linalg-for-ml progress summary
+```
+```json
+{"status":"ok","message":"progress summarized","data":{"lessons":{"total":1,"complete":0,"in_progress":0,"skipped":0},"quizzes":{"passing":0,"total":1},"goals":{"total":4,"achieved":0},"notes":{"total":0,"open":0,"recurring":0,"by_kind":{"gap":0,"mistake":0,"strength":0,"pattern":0,"progress":0}}}}
+```
+
+#### Conventions (agent discipline)
+
+These are not `carpenter` commands, but they are the verification loop the agent
+should run while authoring each lesson:
+
+- **Lock the answer key before trusting `quiz run`.** Put a `solution` (Python
+  defining the fn `name`) on each practice/quiz and run
+  `carpenter -c linalg-for-ml lesson verify --spec <lesson-spec>.yaml` — it runs
+  each solution against its own cases with the same compare logic that grades the
+  learner ([adr/015](../docs/adr/015-reference-solution-verify.md)).
+  `np.linalg.solve` with integer solutions is bit-exact; `np.linalg.inv` /
+  `eig` / `svd` are not.
+- **Round floats to 8 decimals.** Outputs of `inv` / `eig` / `svd` / `lstsq`
+  carry ~1e-16 noise. Have the learner return `np.round(result, 8).tolist()` and
+  store expected values pre-rounded. Integer-valued cases need no rounding.
+- **Design sign-/ambiguity-free cases.** Grade on ranks, singular values,
+  variances, traces, determinants, and integer-valued solutions — not on
+  eigenvectors (sign ambiguity) or raw `inv` output.
+- **Never hand-edit a rendered `lesson.ipynb`.** Regenerate only via
+  `lesson create` / `lesson update` / `lesson sync`.
 

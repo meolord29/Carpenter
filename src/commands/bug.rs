@@ -5,9 +5,9 @@ use crate::core::error::CarpenterError;
 use crate::core::store::{self, Paths};
 use crate::models::Data;
 
-/// File a bug from a spec JSON (`--spec -`/file).
-pub fn file(paths: &Paths, spec_json: &str) -> Result<Data, CarpenterError> {
-    let spec = store::parse_spec(spec_json)?;
+/// File a bug from a spec YAML (`--spec -`/file).
+pub fn file(paths: &Paths, spec_text: &str) -> Result<Data, CarpenterError> {
+    let spec = store::parse_spec(spec_text)?;
     let (id, path) = bugfile::file(paths.require_config_dir()?, Kind::Bug, &spec)?;
     Ok(Data::IssueFile {
         id,
@@ -51,7 +51,7 @@ mod tests {
     use super::*;
     use crate::commands::testutil;
 
-    const SPEC: &str = r#"{"title":"crash","description":"it crashes","repro":"run x"}"#;
+    const SPEC: &str = "title: crash\ndescription: it crashes\nrepro: run x\n";
 
     #[test]
     fn file_ok() {
@@ -70,11 +70,7 @@ mod tests {
     #[test]
     fn file_rejects_rationale_as_bug() {
         let paths = testutil::meta_setup();
-        let err = file(
-            &paths,
-            r#"{"title":"t","description":"d","rationale":"because"}"#,
-        )
-        .unwrap_err();
+        let err = file(&paths, "title: t\ndescription: d\nrationale: because\n").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
         let _ = std::fs::remove_dir_all(paths.root);
         let _ = std::fs::remove_dir_all(paths.config_dir.unwrap());
@@ -83,7 +79,7 @@ mod tests {
     #[test]
     fn file_rejects_empty_title() {
         let paths = testutil::meta_setup();
-        let err = file(&paths, r#"{"title":"","description":"d"}"#).unwrap_err();
+        let err = file(&paths, "title: ''\ndescription: d\n").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
         let _ = std::fs::remove_dir_all(paths.root);
         let _ = std::fs::remove_dir_all(paths.config_dir.unwrap());
@@ -93,7 +89,7 @@ mod tests {
     fn list_ok_sorted() {
         let paths = testutil::meta_setup();
         file(&paths, SPEC).unwrap();
-        file(&paths, r#"{"title":"b","description":"d"}"#).unwrap();
+        file(&paths, "title: b\ndescription: d\n").unwrap();
         let Data::IssueList { items, errors } = list(&paths).expect("list") else {
             panic!("IssueList");
         };

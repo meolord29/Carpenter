@@ -11,7 +11,9 @@ does not hand-duplicate it).
 ```
 ~/.config/opencode/skills/carpenter/SKILL.md        (global; only scope supported)
 ```
-Frontmatter is constrained by opencode — `name` + `description` (required) +
+The skills dir is `xdg_root()` (= carpenter `config_dir.parent()`), so it tracks the OS
+automatically: `~/.config/opencode` Linux, `%APPDATA%\opencode` Windows —
+[design/17](17-cross-platform.md). Frontmatter is constrained by opencode — `name` + `description` (required) +
 `license`/`compatibility`/`metadata`. Name must match the dir, regex
 `^[a-z0-9]+(-[a-z0-9]+)*$` → `carpenter` is valid.
 

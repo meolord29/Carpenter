@@ -8,6 +8,9 @@
   `#[test] fn <command>_*` in the same module (name-prefix mapping). Miss →
   `exit(1)`, no binary. Convention: `commands/` holds only command fns (helpers
   live in `core/`).
+- `build.rs` scenario gate (adr/013) — each `examples/*.md` must reference ≥3
+  distinct command fns (resolved via the same signature-based set above), and ≥1
+  scenario must exist. Miss → `exit(1)`. Covered by the howto stale-check below.
 
 ## Runtime tests (`cargo test`)
 - Autouse temp dirs. The parametrized envelope smoke test over every command **is**
@@ -23,3 +26,13 @@
   `scaffold_hash`).
 
 Gates: `rustfmt`, `clippy -D warnings`, `cargo doc --no-deps -- -D warnings`.
+
+## CI
+`.github/workflows/ci.yml` runs the full gate suite (the commands above) on a matrix of
+`ubuntu`/`macos`/`windows` ([design/17](17-cross-platform.md),
+[adr/012](../adr/012-cross-platform-paths.md)). Preconditions: `rust-toolchain.toml`
+pins stable + `clippy`/`rustfmt`; `uv` is installed (`astral-sh/setup-uv`) so
+`uv_is_available_in_this_env` passes; `.gitattributes` (`eol=lf`) keeps the byte-equality
+stale-checks green on a Windows checkout (no `autocrlf` LF→CRLF flip). The two `python3`
+probes (compare parity, helper validity) `return` on spawn failure and no-op, not fail,
+where `python3` is absent.

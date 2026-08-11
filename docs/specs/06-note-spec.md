@@ -1,6 +1,6 @@
 # NoteSpec
 
-Authored JSON consumed by `notes add --spec -` / `notes update --spec -`.
+Authored YAML consumed by `notes add --spec -` / `notes update --spec -`.
 
 <!-- BEGIN GENERATED -->
 | field | type | rule |
@@ -13,7 +13,12 @@ Authored JSON consumed by `notes add --spec -` / `notes update --spec -`.
 
 Example:
 
-```json
-{"kind":"gap","tags":["recursion"],"recurrence":"new","related":"q2","text":"Learner struggles with base cases."}
+```yaml
+kind: gap
+tags:
+  - recursion
+recurrence: new
+related: q2
+text: Learner struggles with base cases.
 ```
 <!-- END GENERATED -->

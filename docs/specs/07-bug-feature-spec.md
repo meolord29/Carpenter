@@ -1,6 +1,6 @@
 # BugSpec / FeatureSpec
 
-Authored JSON consumed by `bug file --spec -` / `feature file --spec -`. Identical
+Authored YAML consumed by `bug file --spec -` / `feature file --spec -`. Identical
 shape; `repro` is bug-only, `rationale` is feature-only.
 
 <!-- BEGIN GENERATED -->
@@ -13,7 +13,10 @@ shape; `repro` is bug-only, `rationale` is feature-only.
 
 Example:
 
-```json
-{"title":"quiz run ignores --timeout","description":"The timeout flag has no effect.","repro":"carpenter quiz run 01 …","rationale":null}
+```yaml
+title: quiz run ignores --timeout
+description: The timeout flag has no effect.
+repro: carpenter quiz run 01 …
+rationale: null
 ```
 <!-- END GENERATED -->

@@ -7,7 +7,8 @@
 | storage | `rusqlite` (bundled SQLite) |
 | notebooks | `serde_json` (build `.ipynb` v4 cells; metadata as `Value`) |
 | subprocess (notebook exec) | `std::process::Command` → `uv run jupyter nbconvert` (lesson execute + quiz run) |
-| config dirs | `dirs` (XDG `~/.config/carpenter`) |
+| config dirs | `dirs` (per-OS: `~/.config` Linux, `~/Library/Application Support` macOS, `%APPDATA%` Windows — `store::config_dir`) |
+| platform paths | `core/platform.rs` — `#[cfg(target_os)]` `bin_dir` default + executable name (see [adr/012](../adr/012-cross-platform-paths.md)) |
 | errors | `thiserror` |
 | howto codegen | `xtask` binary (see [adr/003](../adr/003-howto-buildstep.md)) |
 | spec codegen | `xtask gen-specs` from `*Spec`/`Data` serde types (see [adr/008](../adr/008-specs-generated-from-types.md)) |

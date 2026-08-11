@@ -75,8 +75,8 @@ fn related_open(
 }
 
 /// Add a note from a spec; echoes the new row + an advisory `related_open`.
-pub fn add(paths: &Paths, course_slug: &str, spec_json: &str) -> Result<Data, CarpenterError> {
-    let spec: NoteSpec = store::parse_spec(spec_json)?;
+pub fn add(paths: &Paths, course_slug: &str, spec_text: &str) -> Result<Data, CarpenterError> {
+    let spec: NoteSpec = store::parse_spec(spec_text)?;
     validate_note_spec(&spec)?;
     let conn = db::open_course(paths, course_slug)?;
     let id = db::next_id(&conn, "notes", "n")?;
@@ -140,9 +140,9 @@ pub fn update(
     paths: &Paths,
     course_slug: &str,
     id: &str,
-    spec_json: &str,
+    spec_text: &str,
 ) -> Result<Data, CarpenterError> {
-    let spec: NoteSpec = store::parse_spec(spec_json)?;
+    let spec: NoteSpec = store::parse_spec(spec_text)?;
     validate_note_spec(&spec)?;
     let conn = db::open_course(paths, course_slug)?;
     let existing = db::get_note(&conn, id)?;
@@ -213,7 +213,7 @@ mod tests {
     use super::*;
     use crate::commands::testutil;
 
-    const SPEC: &str = r#"{"kind":"gap","tags":["recursion"],"text":"struggles with base cases"}"#;
+    const SPEC: &str = "kind: gap\ntags: [recursion]\ntext: struggles with base cases\n";
 
     fn note_id(data: &Data) -> String {
         match data {
@@ -246,14 +246,14 @@ mod tests {
     #[test]
     fn add_rejects_bad_kind() {
         let (paths, slug) = testutil::setup();
-        let err = add(&paths, &slug, r#"{"kind":"nope","text":"t"}"#).unwrap_err();
+        let err = add(&paths, &slug, "kind: nope\ntext: t\n").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
     }
 
     #[test]
     fn add_rejects_empty_text() {
         let (paths, slug) = testutil::setup();
-        let err = add(&paths, &slug, r#"{"kind":"gap","text":"  "}"#).unwrap_err();
+        let err = add(&paths, &slug, "kind: gap\ntext: ''\n").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
     }
 
@@ -264,31 +264,20 @@ mod tests {
         add(
             &paths,
             &slug,
-            r#"{"kind":"gap","tags":["recursion","lists"],"text":"a"}"#,
+            "kind: gap\ntags: [recursion, lists]\ntext: a\n",
         )
         .unwrap();
         // pre-existing resolved note with a shared tag (must be excluded)
-        let resolved = note_id(
-            &add(
-                &paths,
-                &slug,
-                r#"{"kind":"gap","tags":["recursion"],"text":"b"}"#,
-            )
-            .unwrap(),
-        );
+        let resolved =
+            note_id(&add(&paths, &slug, "kind: gap\ntags: [recursion]\ntext: b\n").unwrap());
         resolve(&paths, &slug, &resolved).unwrap();
         // pre-existing open note with no overlap (must be excluded)
-        add(
-            &paths,
-            &slug,
-            r#"{"kind":"strength","tags":["loops"],"text":"c"}"#,
-        )
-        .unwrap();
+        add(&paths, &slug, "kind: strength\ntags: [loops]\ntext: c\n").unwrap();
 
         let data = add(
             &paths,
             &slug,
-            r#"{"kind":"mistake","tags":["lists"],"text":"new note"}"#,
+            "kind: mistake\ntags: [lists]\ntext: new note\n",
         )
         .expect("add");
         match data {
@@ -356,7 +345,7 @@ mod tests {
             &paths,
             &slug,
             &id,
-            r#"{"kind":"pattern","tags":["x"],"recurrence":"recurring","text":"edited"}"#,
+            "kind: pattern\ntags: [x]\nrecurrence: recurring\ntext: edited\n",
         )
         .expect("update") else {
             panic!();

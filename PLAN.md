@@ -239,7 +239,35 @@ A module is not "done" in its phase until its unit tests pass alongside its mand
 - **Drift suite — no hosted CI (per decision):** the repo isn't a git repo and has no host, so the prior "CI runs `xtask build` then `git diff --exit-code`" claim was false. All 5 drift checks already run in `cargo test --workspace` and regenerate-to-buffer + assert byte-equality with committed files (no git/CI needed): howto stale (`howto_gen_md_is_fresh`), spec-marker (`specs_marker_regions_are_fresh`), skill determinism (`render_is_deterministic`), compare parity (`parity_with_helper_python`, skips w/o `python3`), sync goldens (`sync_preserves_learner_edited_stub` + `sync_conflicts_when_db_changed_under_learner_edit`). AGENTS.md reworded to describe this real enforcement.
 - **AGENTS.md review:** fixed the false CI sentence; refreshed the test-list parenthetical (howto+spec stale-checks, skill-determinism, compare-parity, sync-goldens, envelope-smoke); added the `Data`-variant↔`rows()` guidance. Build block, layering, source-of-truth, runtime, IDs, errors, comments conventions all verified current.
 - Test count: 166 + 2 ignored + 2 xtask (was 164+2-ignored+2 at P9 exit; +2 = the two envelope tests).
-- ⏳ **P5 "sync-preserving `update`" still deferred** (YAGNI — reaffirmed P5/P8/P9).
+- ⏳ **P5 "sync-preserving `update`" still deferred** (YAGNI — reaffirmed P5/P8/P9/P10).
+
+## Phase 11 — Scenario examples (multi-command workflows)
+
+- [x] `docs/design/18-scenarios.md` + `docs/adr/013-compile-enforced-scenarios.md` authored
+- [x] `examples/` dir (repo root, `.md`-only) + first scenario file (`examples/build-a-course.md`)
+- [x] `build.rs`: parse `examples/*.md` fenced ```sh blocks → distinct `<group>::<fn>`
+      count; assert **≥3** per file + **≥1** file exists; reuse the existing command-fn
+      set (no new attribute — the "tag" *is* the `pub fn -> Result<Data, _>` signature);
+      `cargo:rerun-if-changed=examples`
+- [x] `xtask/src/howto.rs`: `collect_scenarios()` (sorted by filename for determinism) →
+      append `## Scenarios` section to `howto.gen.md` (verbatim, headings demoted +2)
+- [x] Regenerate `src/howto.gen.md` (via `cargo xtask gen-howto`)
+- [x] `core/skill.rs`: scenarios auto-inline into `SKILL.md` via existing `render()`
+      (free — `render()` already inlines `manual::MANUAL`); added one authored pointer
+      sentence so the agent is directed to the inlined scenarios
+- [x] **Tests:** howto stale-check covers the new section (free) + new
+      `howto_includes_scenarios`; build.rs gate verified to fire on <3 distinct fns
+      (manual negative test); `frontmatter_validates` extended for the scenarios pointer
+- [x] Phase-exit gate green (`cargo xtask build` + `cargo test --workspace` 167+2-ignored+3 + clippy/fmt/doc `--workspace`)
+
+**Notes (P11):**
+- "Tag" on a public fn = its existing signature (`pub fn -> Result<Data, _>` in `commands/`); no proc-macro (adr/013 rejected it, same as adr/007).
+- Parser normalizes leading globals (`-c X` / `--course X` / `--root P`, value-skipping; `--flag=val` and boolean globals like `--version` handled) before reading `<group> <fn>`; the same fn invoked twice counts once (distinct). Unknown invocations fail the build by name. Only ```sh/```bash fences are parsed — ```json envelopes are never counted. Top-level commands (no group) resolve as `<name>::<name>`.
+- The collector **demotes scenario headings by +2** (`# `→`### `, `## `→`#### `, capped at H6, fence-aware) so a scenario nests cleanly under `## Scenarios` — same "mechanical shift, no prose rewrite" spirit as `skill::manual_body()` stripping the manual's H1. Content is otherwise byte-verbatim.
+- First scenario `examples/build-a-course.md` distills a real agent session (a 16-lesson linear-algebra course) into the canonical plan-first flow: `course → venv → plan create → plan confirm → lesson create → lesson execute → quiz run → progress summary` (9 distinct fns). Includes a minimal inline `lesson.json` stub + a Conventions section (strict-`==` answer-key check, round floats to 8dp, sign-free cases).
+- Cargo `examples/` auto-discovery targets only `*.rs`; `.md`-only is harmless (note in design/18; set `autoexamples = false` if a stray `.rs` ever lands).
+- Scenarios do **not** appear in `docs/specs/` — those are per-command envelope contracts; scenarios are howto material.
+- Skill inclusion is mechanical duplication (the howto is still the single authored source via `xtask gen-howto`); the authored pointer sentence is the one new atom (adr/009 style). `carpenter register --print-skill` confirms `## Scenarios` + `### Build a course end-to-end` + the pointer all land in the rendered skill (38.6 KB body).
 
 ---
 
@@ -249,6 +277,6 @@ A module is not "done" in its phase until its unit tests pass alongside its mand
 P0 gates ──> P1 codegen ──> P2 db/course ──> P3 plan/goal
                                 │
                                 └─> P4 lesson authoring (notebook+helper+compare) ──> P5 sync/lifecycle
-                                                                                      │
-                                                                                      └─> P6 execute (venv+nbconvert) ──> P7 skip ──> P8 progress/notes ──> P9 meta ──> P10 hardening
+                                                                                       │
+                                                                                       └─> P6 execute (venv+nbconvert) ──> P7 skip ──> P8 progress/notes ──> P9 meta ──> P10 hardening ──> P11 scenarios
 ```

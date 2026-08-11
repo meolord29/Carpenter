@@ -62,6 +62,12 @@ pub struct CheckableSpec {
     /// Test cases (array index ⇒ `ord`).
     #[serde(default)]
     pub cases: Vec<CaseSpec>,
+    /// Optional **author reference solution** — Python source that defines the
+    /// fn named `name`. Author-only: never rendered into the notebook, never
+    /// shown to the learner. Used by `lesson verify` to self-check the answer
+    /// key ([adr/015](../../docs/adr/015-reference-solution-verify.md)).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub solution: Option<String>,
 }
 
 /// One test case.
@@ -219,6 +225,40 @@ pub struct LessonConflict {
     pub reason: String,
 }
 
+/// One verified checkable (practice/quiz) in `lesson verify`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerifyCheckable {
+    /// `practice` | `quiz`.
+    pub owner_type: String,
+    /// owner id (`p1`/`q1`… in `<id>` mode; the fn `name` in `--spec` mode).
+    pub owner_id: String,
+    /// function name.
+    pub name: String,
+    /// whether a reference `solution` was present to verify against.
+    pub has_solution: bool,
+    /// cases that passed.
+    pub passed: i64,
+    /// total cases.
+    pub total: i64,
+    /// per-case results.
+    pub cases: Vec<VerifyCase>,
+}
+
+/// One case result in `lesson verify`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerifyCase {
+    /// case id.
+    pub case_id: String,
+    /// pass flag.
+    pub passed: bool,
+    /// `repr(actual)` — present only on a comparison mismatch (never `expected`).
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub actual: Option<String>,
+    /// exception/timeout text — present only on a failure (never `expected`).
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub error: Option<String>,
+}
+
 /// Representative examples for spec generation (adr/008).
 pub mod examples {
     use super::*;
@@ -246,6 +286,7 @@ pub mod examples {
                     name: String::from("sum_array"),
                     signature: String::from("def sum_array(arr):"),
                     prompt: String::from("Return the sum of the array."),
+                    solution: Some(String::from("def sum_array(arr):\n    return sum(arr)\n")),
                     cases: vec![
                         CaseSpec {
                             compare: CompareMode::Exact,
@@ -270,6 +311,7 @@ pub mod examples {
                 name: String::from("max_value"),
                 signature: String::from("def max_value(arr):"),
                 prompt: String::from("…"),
+                solution: None,
                 cases: vec![CaseSpec {
                     compare: CompareMode::Exact,
                     args: vec![Value::Array(vec![
@@ -404,6 +446,40 @@ pub mod examples {
                         errored: 0,
                     },
                     errors: Vec::new(),
+                },
+            ),
+            (
+                "verify (<id> | --spec -) [--timeout <SECS>]",
+                "LessonSpec (--spec) | — (<id>)",
+                "runs each author `solution` vs its own cases; `--spec` is the pre-create key-lock, `<id>` re-verifies stored solutions",
+                Data::LessonVerify {
+                    lesson_id: Some(String::from("arrays-101")),
+                    checked: 1,
+                    passing: 1,
+                    failing: 0,
+                    checkables: vec![VerifyCheckable {
+                        owner_type: String::from("practice"),
+                        owner_id: String::from("p1"),
+                        name: String::from("sum_array"),
+                        has_solution: true,
+                        passed: 1,
+                        total: 1,
+                        cases: vec![VerifyCase {
+                            case_id: String::from("c1"),
+                            passed: true,
+                            actual: None,
+                            error: None,
+                        }],
+                    }],
+                },
+            ),
+            (
+                "new [--out <FILE>]",
+                "—",
+                "emits a YAML lesson-spec template (block scalars + `solution`); stdout, or `--out` to write",
+                Data::LessonNew {
+                    yaml: Some(String::from("title: …\nsections: []\n")),
+                    written_to: None,
                 },
             ),
         ]

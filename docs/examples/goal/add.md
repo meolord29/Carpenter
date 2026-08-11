@@ -1,17 +1,14 @@
 **example:**
 
 ```sh
-carpenter -c ds goal add --spec goal.json
+carpenter -c ds goal add --spec goal.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "text": "Implement a hash map from scratch",
-  "covered_by": [
-    "hashing-101"
-  ]
-}
+```yaml
+text: Implement a hash map from scratch
+covered_by:
+  - hashing-101
 ```
 
 Result (one envelope on stdout):

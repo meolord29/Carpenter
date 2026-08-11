@@ -1,6 +1,6 @@
 # GoalSpec
 
-Authored JSON consumed by `goal add --spec -`.
+Authored YAML consumed by `goal add --spec -`.
 
 <!-- BEGIN GENERATED -->
 | field | type | rule |
@@ -10,7 +10,9 @@ Authored JSON consumed by `goal add --spec -`.
 
 Example:
 
-```json
-{"text":"Implement a hash map from scratch","covered_by":["hashing-101"]}
+```yaml
+text: Implement a hash map from scratch
+covered_by:
+  - hashing-101
 ```
 <!-- END GENERATED -->

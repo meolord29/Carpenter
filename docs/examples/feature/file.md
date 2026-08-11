@@ -1,16 +1,14 @@
 **example:**
 
 ```sh
-carpenter feature file --spec feature.json
+carpenter feature file --spec feature.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "title": "add dark mode",
-  "description": "Users ask for a dark theme.",
-  "rationale": "frequent user request"
-}
+```yaml
+title: add dark mode
+description: Users ask for a dark theme.
+rationale: frequent user request
 ```
 
 Result (one envelope on stdout):

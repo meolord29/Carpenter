@@ -22,8 +22,8 @@ fn validate_covered_by(
 }
 
 /// Add a goal from a spec.
-pub fn add(paths: &Paths, course_slug: &str, spec_json: &str) -> Result<Data, CarpenterError> {
-    let spec: GoalSpec = store::parse_spec(spec_json)?;
+pub fn add(paths: &Paths, course_slug: &str, spec_text: &str) -> Result<Data, CarpenterError> {
+    let spec: GoalSpec = store::parse_spec(spec_text)?;
     if spec.text.trim().is_empty() {
         return Err(CarpenterError::ValidationError(
             "text must be non-empty".into(),
@@ -147,7 +147,7 @@ mod tests {
     use crate::commands::testutil;
     use crate::models::Data;
 
-    const SPEC: &str = r#"{"text":"learn hashing","covered_by":[]}"#;
+    const SPEC: &str = "text: learn hashing\ncovered_by: []\n";
 
     fn goal_id(data: &Data) -> String {
         match data {
@@ -169,19 +169,14 @@ mod tests {
     #[test]
     fn add_rejects_empty_text() {
         let (paths, slug) = testutil::setup();
-        let err = add(&paths, &slug, r#"{"text":"  ","covered_by":[]}"#).unwrap_err();
+        let err = add(&paths, &slug, "text: '  '\ncovered_by: []\n").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
     }
 
     #[test]
     fn add_rejects_unresolved_covered_by() {
         let (paths, slug) = testutil::setup();
-        let err = add(
-            &paths,
-            &slug,
-            r#"{"text":"t","covered_by":["nope-lesson"]}"#,
-        )
-        .unwrap_err();
+        let err = add(&paths, &slug, "text: t\ncovered_by:\n  - nope-lesson\n").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
     }
 

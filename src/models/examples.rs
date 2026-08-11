@@ -111,7 +111,7 @@ fn howto_entry() -> SpecEntry {
 }
 
 fn course_spec_entry() -> SpecEntry {
-    let json = serde_json::to_string(&course::examples::spec()).unwrap_or_default();
+    let yaml = serde_yml::to_string(&course::examples::spec()).unwrap_or_default();
     SpecEntry {
         file: "02-course-spec.md",
         markdown: format!(
@@ -120,7 +120,7 @@ fn course_spec_entry() -> SpecEntry {
              | title | string | required, non-empty |\n\
              | goal | string | required, non-empty |\n\
              | description | string | optional, default `\"\"` |\n\n\
-             Example:\n\n```json\n{json}\n```"
+             Example:\n\n```yaml\n{yaml}\n```"
         ),
     }
 }
@@ -133,7 +133,7 @@ fn course_output_entry() -> SpecEntry {
 }
 
 fn plan_spec_entry() -> SpecEntry {
-    let json = serde_json::to_string(&plan::examples::spec()).unwrap_or_default();
+    let yaml = serde_yml::to_string(&plan::examples::spec()).unwrap_or_default();
     SpecEntry {
         file: "04-plan-spec.md",
         markdown: format!(
@@ -141,7 +141,7 @@ fn plan_spec_entry() -> SpecEntry {
              | title | string | required |\n\
              | goals | string[] | bullet goals; become `goals` rows on `confirm` (course scope) |\n\
              | links | `{{goal_index_<i>: lesson_id[]}}` | maps each goal to covering lessons. `<i>` is the 0-based index into `goals[]` (range-checked at `create`; lesson ids resolved at `confirm`). A goal absent from `links` gets `covered_by:[]`. |\n\n\
-             Example:\n\n```json\n{json}\n```"
+             Example:\n\n```yaml\n{yaml}\n```"
         ),
     }
 }
@@ -154,14 +154,14 @@ fn plan_output_entry() -> SpecEntry {
 }
 
 fn goal_spec_entry() -> SpecEntry {
-    let json = serde_json::to_string(&goal::examples::spec()).unwrap_or_default();
+    let yaml = serde_yml::to_string(&goal::examples::spec()).unwrap_or_default();
     SpecEntry {
         file: "05-goal-spec.md",
         markdown: format!(
             "| field | type | rule |\n|-------|------|------|\n\
              | text | string | required, non-empty — the bullet goal |\n\
              | covered_by | string[] | default `[]` — lesson ids covering this goal (resolved on use; unresolved ⇒ `ValidationError`) |\n\n\
-             Example:\n\n```json\n{json}\n```"
+             Example:\n\n```yaml\n{yaml}\n```"
         ),
     }
 }
@@ -174,7 +174,7 @@ fn goal_output_entry() -> SpecEntry {
 }
 
 fn lesson_spec_entry() -> SpecEntry {
-    let json = serde_json::to_string(&lesson::examples::spec()).unwrap_or_default();
+    let yaml = serde_yml::to_string(&lesson::examples::spec()).unwrap_or_default();
     SpecEntry {
         file: "03-lesson-spec.md",
         markdown: format!(
@@ -183,13 +183,14 @@ fn lesson_spec_entry() -> SpecEntry {
              | slug | string? | derived from title if absent |\n\
              | order | int? | appended (max+1) if absent |\n\
              | sections[].snippets | `{{kind, content}}`[] | required; **`snippets[0].kind == \"markdown\"`**; each renders one cell |\n\
-             | sections[].practice / quizzes | Checkable[] | array index ⇒ `ord` |\n\
-             | cases[].compare | enum | `exact`(default) \\| `sorted` \\| `set` |\n\
-             | cases[].args | array | default `[]` |\n\
-             | cases[].kwargs | object | default `{{}}` |\n\
-             | cases[].expected | any | required |\n\n\
+              | sections[].practice / quizzes | Checkable[] | array index ⇒ `ord` |\n\
+              | cases[].compare | enum | `exact`(default) \\| `sorted` \\| `set` |\n\
+              | cases[].args | array | default `[]` |\n\
+              | cases[].kwargs | object | default `{{}}` |\n\
+              | cases[].expected | any | required |\n\
+              | practice[]/quizzes[].solution | string? | **author reference solution** (Python defining the fn `name`); author-only — never rendered/shown to learner; verified by `lesson verify` ([adr/015](../adr/015-reference-solution-verify.md)) |\n\n\
              **Checkable** (shared): `{{name, signature, prompt?, cases[]}}`. `expected` for a `sorted`/`set` case must be sortable/hashable else the case errors (`error:\"unsortable\"`/`\"unhashable\"`).\n\n\
-             Example:\n\n```json\n{json}\n```"
+             Example:\n\n```yaml\n{yaml}\n```"
         ),
     }
 }
@@ -223,7 +224,7 @@ fn skip_output_entry() -> SpecEntry {
 }
 
 fn note_spec_entry() -> SpecEntry {
-    let json = serde_json::to_string(&note::examples::spec()).unwrap_or_default();
+    let yaml = serde_yml::to_string(&note::examples::spec()).unwrap_or_default();
     SpecEntry {
         file: "06-note-spec.md",
         markdown: format!(
@@ -233,7 +234,7 @@ fn note_spec_entry() -> SpecEntry {
              | recurrence | enum | `new`(default) \\| `recurring` — **authored**; the system never overwrites it (it may surface `related_open` as a hint in `add` output — see [14-notes.md](14-notes.md)) |\n\
              | related | string? | a lesson/quiz id; stored as free text (no FK) — an unresolvable id is kept as-is, not rejected |\n\
              | text | string | required, non-empty |\n\n\
-             Example:\n\n```json\n{json}\n```"
+             Example:\n\n```yaml\n{yaml}\n```"
         ),
     }
 }
@@ -253,7 +254,7 @@ fn progress_output_entry() -> SpecEntry {
 }
 
 fn bug_feature_spec_entry() -> SpecEntry {
-    let json = serde_json::to_string(&issue::examples::spec()).unwrap_or_default();
+    let yaml = serde_yml::to_string(&issue::examples::spec()).unwrap_or_default();
     SpecEntry {
         file: "07-bug-feature-spec.md",
         markdown: format!(
@@ -262,7 +263,7 @@ fn bug_feature_spec_entry() -> SpecEntry {
              | description | string | required, non-empty |\n\
              | repro | string? | bug only — passing it on a feature (or with `rationale`) ⇒ `ValidationError` |\n\
              | rationale | string? | feature only — passing it on a bug (or with `repro`) ⇒ `ValidationError` |\n\n\
-             Example:\n\n```json\n{json}\n```"
+             Example:\n\n```yaml\n{yaml}\n```"
         ),
     }
 }
@@ -311,6 +312,19 @@ fn howto_entry_serializes_to_expected_shape() {
         "{}",
         entry.markdown
     );
+}
+
+/// gen-specs emits each `*::examples::spec()` as YAML; the example must round-trip
+/// through serde_yml (serialize → parse → serialize is stable). Guards the YAML-only
+/// spec-doc examples against a serde-yml/struct mismatch (adr/014).
+#[cfg(test)]
+#[test]
+fn spec_examples_round_trip_as_yaml() {
+    let lesson_yaml = serde_yml::to_string(&lesson::examples::spec()).expect("serialize lesson");
+    let back: crate::models::lesson::LessonSpec =
+        serde_yml::from_str(&lesson_yaml).unwrap_or_else(|e| panic!("parse: {e}\n{lesson_yaml}"));
+    let again = serde_yml::to_string(&back).expect("reserialize");
+    assert_eq!(lesson_yaml, again, "YAML round-trip not stable");
 }
 
 #[cfg(test)]

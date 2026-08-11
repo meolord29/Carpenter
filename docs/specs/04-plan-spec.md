@@ -1,6 +1,6 @@
 # PlanSpec
 
-Authored JSON consumed by `plan create --scope course|lesson --spec -`.
+Authored YAML consumed by `plan create --scope course|lesson --spec -`.
 
 <!-- BEGIN GENERATED -->
 | field | type | rule |
@@ -11,7 +11,14 @@ Authored JSON consumed by `plan create --scope course|lesson --spec -`.
 
 Example:
 
-```json
-{"title":"Data Structures — course plan","goals":["Know array/list internals","Implement a hash map from scratch"],"links":{"goal_index_0":["arrays-101","hashing-101"]}}
+```yaml
+title: Data Structures — course plan
+goals:
+  - Know array/list internals
+  - Implement a hash map from scratch
+links:
+  goal_index_0:
+    - arrays-101
+    - hashing-101
 ```
 <!-- END GENERATED -->

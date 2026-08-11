@@ -1,12 +1,15 @@
 //! gen-howto: regenerate `src/howto.gen.md` from the clap surface + each
-//! command's worked-example file under `docs/examples/`.
+//! command's worked-example file under `docs/examples/`, plus the multi-command
+//! scenario files under `examples/`.
 //!
 //! The command TREE (groups, names, about, flags) comes from `carpenter::app::cli()`
 //! (recursed into nested groups). The EXAMPLE blocks come from
 //! `docs/examples/<module>/<name>.md`, keyed `<module>::<name>` so groups with
 //! same-named leaves (e.g. `course::create` vs `lesson::create`) don't collide.
 //! That file is the single source — build.rs enforces its presence per command fn
-//! (adr/007 update), and nothing is scraped from `///` anymore.
+//! (adr/007 update), and nothing is scraped from `///` anymore. The SCENARIOS
+//! (`examples/*.md`, each gated to ≥3 distinct command fns by build.rs) are
+//! appended under `## Scenarios` (adr/013).
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -43,6 +46,24 @@ pub fn generate() -> String {
 
     for sub in root.get_subcommands() {
         render(sub, sub.get_name(), 2, &mut out, &examples, &global_names);
+    }
+
+    // End-to-end scenario workflows (`examples/*.md`), embedded verbatim with
+    // headings demoted +2 so they nest under `## Scenarios` (adr/013).
+    let scenarios = collect_scenarios();
+    if !scenarios.is_empty() {
+        out.push_str("## Scenarios\n\n");
+        out.push_str(
+            "Multi-command workflows composed toward one goal \
+             ([adr/013](../docs/adr/013-compile-enforced-scenarios.md)). These are \
+             **illustrative examples**: every filename, slug, and path (including \
+             `<root>/…`) is a placeholder pattern to adapt — none exist on disk; \
+             do not read, create, or navigate to them.\n\n",
+        );
+        for (_name, body) in scenarios {
+            out.push_str(&demote_headings(&body));
+            out.push('\n');
+        }
     }
     out
 }
@@ -150,6 +171,67 @@ fn walk_md(dir: &Path) -> Vec<PathBuf> {
     out
 }
 
+/// Collect scenario files (`examples/*.md`, flat) as `(filename, text)`, sorted
+/// by filename for deterministic output. Each is embedded verbatim (with
+/// headings demoted) into the manual's `## Scenarios` section (adr/013).
+fn collect_scenarios() -> Vec<(String, String)> {
+    let dir = crate::paths::workspace_root().join("examples");
+    let mut out: Vec<(String, String)> = Vec::new();
+    for path in walk_md_flat(&dir) {
+        let name = path
+            .file_name()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_default();
+        if let Ok(text) = std::fs::read_to_string(&path) {
+            out.push((name, text));
+        }
+    }
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    out
+}
+
+/// Top-level `<dir>/*.md` files (scenarios are flat — one file per workflow).
+fn walk_md_flat(dir: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return out;
+    };
+    for e in entries.flatten() {
+        let p = e.path();
+        if p.is_file() && p.extension().map(|x| x == "md").unwrap_or(false) {
+            out.push(p);
+        }
+    }
+    out
+}
+
+/// Demote every column-0 markdown heading by 2 levels (`# `→`### `, `## `→
+/// `#### `…) so a scenario file nests cleanly under the manual's `## Scenarios`
+/// heading. Headings inside fenced code blocks are left untouched. The prose is
+/// otherwise byte-verbatim (mirrors `skill::manual_body`'s H1 strip — a
+/// mechanical shift, not a rewrite).
+fn demote_headings(text: &str) -> String {
+    let mut out = String::new();
+    let mut in_fence = false;
+    for line in text.lines() {
+        if line.trim_start().starts_with("```") {
+            in_fence = !in_fence;
+            out.push_str(line);
+            out.push('\n');
+            continue;
+        }
+        if !in_fence && line.starts_with('#') {
+            let n = line.chars().take_while(|&c| c == '#').count();
+            if n < 6 {
+                out.push_str("##");
+            }
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    out
+}
+
 #[cfg(test)]
 #[test]
 fn howto_gen_md_is_fresh() {
@@ -158,5 +240,21 @@ fn howto_gen_md_is_fresh() {
     assert_eq!(
         generated, committed,
         "src/howto.gen.md is stale; run `cargo xtask gen-howto`"
+    );
+}
+
+#[cfg(test)]
+#[test]
+fn howto_includes_scenarios() {
+    // At least one scenario ships (adr/013 global floor); the manual must carry
+    // the section + every scenario's (demoted) title.
+    let generated = generate();
+    assert!(
+        generated.contains("## Scenarios"),
+        "manual missing the ## Scenarios section"
+    );
+    assert!(
+        generated.contains("### Build a course end-to-end"),
+        "scenario title not demoted+inlined under ## Scenarios"
     );
 }

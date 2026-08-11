@@ -1,72 +1,42 @@
 **example:**
 
 ```sh
-carpenter -c ds lesson create --spec lesson.json
+carpenter -c ds lesson create --spec lesson.yaml
 ```
 
 Input spec (`--spec <FILE|->`):
-```json
-{
-  "title": "Arrays 101",
-  "slug": "arrays-101",
-  "sections": [
-    {
-      "title": "What is an array",
-      "snippets": [
-        {
-          "kind": "markdown",
-          "content": "An array stores items contiguously…"
-        },
-        {
-          "kind": "code",
-          "content": "import numpy as np\nnp.array([1, 2, 3])"
-        }
-      ],
-      "practice": [
-        {
-          "name": "sum_array",
-          "signature": "def sum_array(arr):",
-          "prompt": "Return the sum of the array.",
-          "cases": [
-            {
-              "compare": "exact",
-              "args": [
-                [
-                  1,
-                  2,
-                  3
-                ]
-              ],
-              "kwargs": {},
-              "expected": 6
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "quizzes": [
-    {
-      "name": "max_value",
-      "signature": "def max_value(arr):",
-      "prompt": "Return the max.",
-      "cases": [
-        {
-          "compare": "exact",
-          "args": [
-            [
-              3,
-              1,
-              2
-            ]
-          ],
-          "kwargs": {},
-          "expected": 3
-        }
-      ]
-    }
-  ]
-}
+```yaml
+title: Arrays 101
+slug: arrays-101
+sections:
+  - title: What is an array
+    snippets:
+      - kind: markdown
+        content: An array stores items contiguously…
+      - kind: code
+        content: |
+          import numpy as np
+          np.array([1, 2, 3])
+    practice:
+      - name: sum_array
+        signature: "def sum_array(arr):"
+        prompt: Return the sum of the array.
+        cases:
+          - compare: exact
+            args:
+              - [1, 2, 3]
+            kwargs: {}
+            expected: 6
+quizzes:
+  - name: max_value
+    signature: "def max_value(arr):"
+    prompt: Return the max.
+    cases:
+      - compare: exact
+        args:
+          - [3, 1, 2]
+        kwargs: {}
+        expected: 3
 ```
 
 Result (one envelope on stdout):

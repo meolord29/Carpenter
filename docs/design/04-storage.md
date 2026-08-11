@@ -17,4 +17,11 @@
     └── helper.py             # generated, per lesson
 ```
 
+Paths are per-OS ([adr/012](../adr/012-cross-platform-paths.md),
+[design/17](17-cross-platform.md)): `~/.config/carpenter` is the Linux config dir
+(macOS `~/Library/Application Support/carpenter`, Windows `%APPDATA%\carpenter`), already
+resolved by `dirs`; the `bin_dir` default and installed-binary name (`carpenter.exe` on
+Windows) are resolved by `core/platform.rs`. The layout below the config dir is identical
+on every OS.
+
 Schema: see [data-model/](../data-model/). Contracts: see [specs/](../specs/).

@@ -35,7 +35,7 @@ const PEDAGOGY: &str = "One concept per lesson. Practice is attached to its teac
 /// Authored content-walkthrough checklist. Runs after `plan confirm`, before any
 /// `lesson create`. The agent must present the agreed outline back to the user and
 /// wait for confirmation — generating lessons before approval is a process bug.
-const WALKTHROUGH: &str = "Before generating any lesson, run this Q&A with the user and **confirm the proposed outline** (lesson list + per-lesson practice/quizzes + conventions). Do not call `lesson create` until the user explicitly approves.\n\n1. **Audience & scope** — level (beginner/intermediate/advanced), prerequisites, total lesson count, and grouping into parts/batches.\n2. **Outline** — for each lesson: title, the concepts it teaches, the practice functions (name + signature + return type), and the end-of-lesson quizzes. Propose the full list and let the user edit it.\n3. **Grading conventions** — agree these once and apply everywhere:\n   - Compare is **exact** by default (`compare:\"exact\"`); use `sorted`/`set` only when order or multiplicity is irrelevant.\n   - Cases return **plain Python** (`float(...)`, `.tolist()`, `int`, `bool`, `str`, nested `list`) — never raw NumPy arrays.\n   - **Float outputs round to 8 decimals** (`np.round(x, 8).tolist()`) so LAPACK noise (`inv`/`eig`/`svd`/`lstsq`) passes exact equality. Prefer integer-valued cases (bit-exact without rounding).\n   - Design cases to be **deterministic**: avoid sign/scale ambiguity (eigenvectors, SVD `U`/`V` columns) — grade on eigenvalues, singular values, ranks, traces, determinants, reconstructions, or `argmax` instead.\n4. **Stack & IDs** — language, the venv deps (`venv create` + `venv add`), and the slug/ID conventions.\n5. **Verification contract** — per lesson: (a) check the answer key under strict `==` in a throwaway script outside the notebook; (b) `lesson execute --allow-errors` reports `errored:0` (teaching cells run clean; empty stubs define functions and don't raise at define time); (c) `quiz run` on the fresh notebook reports all quizzes `pass_or_fail:false`. **Never hand-edit a rendered `lesson.ipynb`** — regenerate only via `lesson create` / `lesson update` / `lesson sync`.\n6. **Domain** — pick a concrete running example domain.\n\nPresent the agreed outline back as a checklist and proceed only after the user confirms.";
+const WALKTHROUGH: &str = "Before generating any lesson, run this Q&A with the user and **confirm the proposed outline** (lesson list + per-lesson practice/quizzes + conventions). Do not call `lesson create` until the user explicitly approves.\n\n1. **Audience & scope** — level (beginner/intermediate/advanced), prerequisites, total lesson count, and grouping into parts/batches.\n2. **Outline** — for each lesson: title, the concepts it teaches, the practice functions (name + signature + return type), and the end-of-lesson quizzes. Propose the full list and let the user edit it.\n3. **Grading conventions** — agree these once and apply everywhere:\n   - Compare is **exact** by default (`compare:\"exact\"`); use `sorted`/`set` only when order or multiplicity is irrelevant.\n   - Cases return **plain Python** (`float(...)`, `.tolist()`, `int`, `bool`, `str`, nested `list`) — never raw NumPy arrays.\n   - **Float outputs round to 8 decimals** (`np.round(x, 8).tolist()`) so LAPACK noise (`inv`/`eig`/`svd`/`lstsq`) passes exact equality. Prefer integer-valued cases (bit-exact without rounding).\n   - Design cases to be **deterministic**: avoid sign/scale ambiguity (eigenvectors, SVD `U`/`V` columns) — grade on eigenvalues, singular values, ranks, traces, determinants, reconstructions, or `argmax` instead.\n4. **Stack & IDs** — language, the venv deps (`venv create` + `venv add`), and the slug/ID conventions. Author specs as **YAML** (block scalars keep multi-line markdown/code readable); `carpenter lesson new` emits a YAML template. Quote any value containing `:` (signatures always do).\n5. **Verification contract** — per lesson: (a) lock the answer key with `lesson verify` — each practice/quiz may carry a `solution` (author reference Python) that carpenter runs against its own cases in the course venv (`lesson verify --spec -` before create, `lesson verify <id>` to re-verify); (b) `lesson execute --allow-errors` reports `errored:0` (teaching cells run clean; empty stubs define functions and don't raise at define time); (c) `quiz run` on the fresh notebook reports all quizzes `pass_or_fail:false`. **Never hand-edit a rendered `lesson.ipynb`** — regenerate only via `lesson create` / `lesson update` / `lesson sync`.\n6. **Domain** — pick a concrete running example domain.\n\nPresent the agreed outline back as a checklist and proceed only after the user confirms.";
 
 /// Validate a skill name against opencode's `^[a-z0-9]+(-[a-z0-9]+)*$`.
 pub fn name_is_valid(s: &str) -> bool {
@@ -103,7 +103,11 @@ pub fn render() -> Result<String, CarpenterError> {
          ## Pedagogy\n\n{PEDAGOGY}\n\n\
          ## Command manual\n\n\
          Sourced from `{NAME} howto` at render time — always matches the installed \
-         binary. Installed version: {version} (`{bin}`).\n\n\
+         binary. Includes end-to-end worked **scenarios** (course → plan → lesson \
+         → quiz → progress) under its `## Scenarios` heading — consult them before \
+         authoring a new course; the scenarios are illustrative (paths and slugs \
+         are placeholders, not real files to read or navigate to). Installed \
+         version: {version} (`{bin}`).\n\n\
          {manual}",
         manual = manual_body(),
     );
@@ -328,6 +332,18 @@ mod tests {
             !s.contains("fill stubs"),
             "verification contract must not instruct the mutating fill/restore pattern"
         );
+        assert!(
+            s.contains("lesson verify"),
+            "walkthrough must steer to lesson verify (not the obsolete throwaway script)"
+        );
+        assert!(
+            s.contains("YAML"),
+            "walkthrough must steer to YAML spec authoring"
+        );
+        assert!(
+            !s.contains("throwaway script"),
+            "walkthrough must not reference the obsolete throwaway-script pattern"
+        );
         // The generated howto manual is inlined verbatim (adr/009 update).
         assert!(
             s.contains("## Command manual"),
@@ -340,6 +356,15 @@ mod tests {
         assert!(
             s.contains("goal_index_"),
             "body must inline the worked-example specs (not just terse envelopes)"
+        );
+        // Scenarios are inlined via the manual (adr/013); the skill points at them.
+        assert!(
+            s.contains("## Scenarios"),
+            "body must inline the ## Scenarios section from the howto"
+        );
+        assert!(
+            s.contains("consult them before authoring"),
+            "body must carry the authored pointer to the inlined scenarios"
         );
     }
 

@@ -23,3 +23,16 @@
 10. Meta commands: bug, feature, config, link (manifest), build, install, upgrade,
     register/deregister (skill integration).
 11. Envelope smoke test across all commands; `AGENTS.md` finalized.
+12. Cross-platform (Linux/macOS/Windows): [adr/012](../adr/012-cross-platform-paths.md),
+    [design/17](17-cross-platform.md). `core/platform.rs` (`#[cfg(target_os)]`:
+    `default_bin_dir` + `exe_file_name`); wire `Config::default` + `install`/`upgrade` to
+    it. Normalize the 8 `String::ends_with` path assertions to `Path`-component checks.
+    Add `.gitattributes` (`eol=lf`) so the byte-equality stale-checks hold on Windows.
+    Add `.github/workflows/ci.yml` (3-OS matrix, full gate suite, `uv` installed) +
+    `rust-toolchain.toml` (stable pin). `config_dir` already portable via `dirs` — no
+    change there.
+13. Scenario examples ([design/18](18-scenarios.md),
+    [adr/013](../adr/013-compile-enforced-scenarios.md)): a second `build.rs` gate
+    over `examples/*.md` (each scenario must reference ≥3 distinct command fns; ≥1
+    must exist); `xtask gen-howto` appends a `## Scenarios` section (verbatim) →
+    auto-inlined into `SKILL.md` by `render()`.
