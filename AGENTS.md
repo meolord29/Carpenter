@@ -110,6 +110,31 @@ matrix — `rust-toolchain.toml` pins stable; `uv` is installed;
 [design/17](docs/design/17-cross-platform.md),
 [adr/012](docs/adr/012-cross-platform-paths.md).
 
+## Dev authoring loop (`--dev`)
+Two build stages ([design/19](docs/design/19-dev-build.md),
+[adr/016](docs/adr/016-dev-feature.md)):
+- **dev** — `cargo xtask build --dev`: compiles with the `dev` feature, which
+  **relaxes** the doc/example/scenario gates and `missing_docs` (so a command fn
+  compiles before its atom/test exist). No doc regen.
+- **release** — `cargo xtask build --release`: gen-howto + gen-specs + the strict
+  `cargo build` (the ship build). Plain `cargo build` / `cargo xtask build` are
+  also strict — a casual build still fails on an undocumented command (safety
+  net). `dev` + `release` together is **rejected** (no relaxed binary ships).
+
+Authoring a new command fn (the chicken-and-egg adr/007/adr/013 create):
+```sh
+cargo xtask build --dev                                          # 1. relaxed binary
+./target/debug/carpenter <group> <fn> … --capture-example docs/examples/<module>/<fn>.md
+                                                                 # 2. run for real + write the atom
+# 3. add the `#[test] fn <fn>_*` by hand; author the atom's TODO note line
+cargo xtask build                                                # 4. strict verify (now passes)
+```
+`--capture-example` (dev-only) writes the worked-example atom from a real run
+(real envelope); the behavioral note stays a TODO for a human/LLM. The dev
+surface is `cfg`-gated out of release, and xtask regenerates docs from a
+non-dev link so `--capture-example` never appears in `howto.gen.md`/`SKILL.md`
+(`howto_excludes_dev_surface` pins it).
+
 ## The ponytail ladder (apply before writing any code)
 Before writing code, stop at the first rung that holds:
 1. Does this need to exist? → no: skip it (YAGNI).

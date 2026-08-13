@@ -591,6 +591,29 @@ pub enum Data {
         /// top-level command names.
         commands: Vec<String>,
     },
+    // ---- dev (adr/016; cfg-gated — never in a release binary) ----
+    /// (dev) `carpenter dev check` — prerequisite probe.
+    #[cfg(feature = "dev")]
+    DevCheck {
+        /// the prerequisite checks (uv, …).
+        checks: Vec<crate::models::dev::DevCheckItem>,
+    },
+    /// (dev) `carpenter dev setup` — create the validation sandbox.
+    #[cfg(feature = "dev")]
+    DevSetup {
+        /// absolute sandbox path.
+        path: String,
+        /// whether the directory was newly created.
+        created: bool,
+    },
+    /// (dev) `carpenter dev clean` — remove the validation sandbox.
+    #[cfg(feature = "dev")]
+    DevClean {
+        /// whether a sandbox was removed.
+        removed: bool,
+        /// the removed path.
+        path: String,
+    },
 }
 
 impl Data {
@@ -670,6 +693,18 @@ impl Data {
             Self::Install { bin, .. } => format!("installed: {bin}"),
             Self::Upgrade { version, .. } => format!("upgraded: {version}"),
             Self::LinkRegister { .. } => String::from("link manifest emitted"),
+            #[cfg(feature = "dev")]
+            Self::DevCheck { .. } => String::from("dev prerequisites checked"),
+            #[cfg(feature = "dev")]
+            Self::DevSetup { path, .. } => format!("dev sandbox set up: {path}"),
+            #[cfg(feature = "dev")]
+            Self::DevClean { removed, path } => {
+                if *removed {
+                    format!("dev sandbox cleaned: {path}")
+                } else {
+                    format!("dev sandbox already absent: {path}")
+                }
+            }
         }
     }
 }

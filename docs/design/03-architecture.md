@@ -50,3 +50,27 @@ it, never duplicates (see [adr/009](../adr/009-skill-assembled-from-fields.md)).
 sole home of per-OS path behavior outside the one `cfg!(windows)` PATH-split in
 `store::is_on_path` — see [design/17](17-cross-platform.md),
 [adr/012](../adr/012-cross-platform-paths.md).
+
+## Stack
+
+_(merged from the former `02-stack.md`)_
+
+| concern | crate |
+|---------|-------|
+| CLI | `clap` (derive; `--help` is free and is what `howto` scrapes) |
+| models / serialization | `serde` + `serde_json` + `serde_yml` (YAML `--spec` input — [adr/014](../adr/014-yaml-spec-input.md)) |
+| storage | `rusqlite` (bundled SQLite) |
+| notebooks | `serde_json` (build `.ipynb` v4 cells; metadata as `Value`) |
+| subprocess (uv + nbconvert) | `std::process::Command` via `core/exec.rs` (`uv run jupyter nbconvert` for lesson execute + quiz run) |
+| config dirs | `dirs` (per-OS: `~/.config` Linux, `~/Library/Application Support` macOS, `%APPDATA%` Windows — `store::config_dir`) |
+| platform paths | `core/platform.rs` — `#[cfg(target_os)]` `bin_dir` default + executable name ([adr/012](../adr/012-cross-platform-paths.md)) |
+| slugs | `unicode-normalization` (NFKD fold in `store::slugify`) |
+| errors | `thiserror` |
+| howto codegen | `xtask` binary ([adr/003](../adr/003-howto-buildstep.md)) |
+| spec codegen | `xtask gen-specs` from `*Spec`/`Data` serde types ([adr/008](../adr/008-specs-generated-from-types.md)) |
+| compile-time doc/test gate | `build.rs` + `syn` build-dep ([adr/007](../adr/007-compile-enforced-command-docs.md)) |
+
+Tooling: `cargo`, `rustfmt`, `clippy --workspace --all-targets -- -D warnings`,
+`cargo test` / `cargo-nextest`, and `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
+--workspace` (the deny flag goes via `RUSTDOCFLAGS` — `cargo doc` rejects
+`-- -D warnings` in this toolchain).

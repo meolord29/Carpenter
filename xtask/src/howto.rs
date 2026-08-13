@@ -232,7 +232,7 @@ fn demote_headings(text: &str) -> String {
     out
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(feature = "dev")))]
 #[test]
 fn howto_gen_md_is_fresh() {
     let generated = generate();
@@ -243,7 +243,7 @@ fn howto_gen_md_is_fresh() {
     );
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(feature = "dev")))]
 #[test]
 fn howto_includes_scenarios() {
     // At least one scenario ships (adr/013 global floor); the manual must carry
@@ -256,5 +256,30 @@ fn howto_includes_scenarios() {
     assert!(
         generated.contains("### Build a course end-to-end"),
         "scenario title not demoted+inlined under ## Scenarios"
+    );
+}
+
+#[cfg(all(test, not(feature = "dev")))]
+#[test]
+fn howto_excludes_dev_surface() {
+    // gen-howto runs in the xtask build, which links carpenter WITHOUT the
+    // `dev` feature, so dev-only surface must never reach the committed manual
+    // (and thus the inlined SKILL.md). Pins the adr/016 invariant.
+    let generated = generate();
+    assert!(
+        !generated.contains("capture-example"),
+        "dev-only `--capture-example` flag leaked into howto.gen.md"
+    );
+    assert!(
+        !generated.contains("DEV ONLY"),
+        "dev-only help text leaked into howto.gen.md"
+    );
+    assert!(
+        !generated.contains("## dev"),
+        "dev-only `dev` group leaked into howto.gen.md"
+    );
+    assert!(
+        !generated.contains("dev register") && !generated.contains("dev upgrade"),
+        "dev-only register/upgrade leaked into howto.gen.md"
     );
 }

@@ -11,6 +11,11 @@
 //!
 //! The example file (not an inline `///` fence) is the atom — see the Update
 //! block in adr/007.
+//!
+//! Under the `dev` feature (adr/016) every gate below — plus the scenario gate
+//! (adr/013) — is skipped, and `#![deny(missing_docs)]` is relaxed, so a command
+//! can be compiled and run to capture a real envelope before its atom/test
+//! exist. `dev` + `release` is rejected (no relaxed binary ships).
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -19,6 +24,24 @@ fn main() {
     println!("cargo:rerun-if-changed=src/commands");
     println!("cargo:rerun-if-changed=docs/examples");
     println!("cargo:rerun-if-changed=examples");
+    println!("cargo:rerun-if-changed=Cargo.toml");
+
+    // The `dev` feature (adr/016) relaxes the gates below for the authoring
+    // loop. It must never ship: a release binary built with `dev` would bypass
+    // the self-documentation contract (adr/007) and the scenario floor (adr/013).
+    let dev = std::env::var_os("CARGO_FEATURE_DEV").is_some();
+    if dev && std::env::var("PROFILE").as_deref() == Ok("release") {
+        eprintln!(
+            "error: the `dev` feature relaxes the doc/example/scenario gates \
+             and must not be used in a release build (adr/016)"
+        );
+        std::process::exit(1);
+    }
+    if dev {
+        println!("cargo:warning=dev build: doc/example/scenario gates relaxed (adr/016)");
+        return;
+    }
+
     let dir = Path::new("src/commands");
     let examples = Path::new("docs/examples");
     if !dir.exists() {

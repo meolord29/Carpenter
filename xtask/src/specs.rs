@@ -45,7 +45,7 @@ pub fn replace_region(src: &str, replacement: &str) -> String {
     out
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(feature = "dev")))]
 #[test]
 fn specs_marker_regions_are_fresh() {
     let specs_dir = crate::paths::workspace_root().join("docs/specs");

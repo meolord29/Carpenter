@@ -5,6 +5,11 @@ edition = "2021"
 description = "Agent-driven CLI that builds Python/Jupyter learning material."
 license = "Apache-2.0"
 
+[features]
+# Relaxes the doc/example/scenario gates (adr/016) for the authoring loop.
+# Never enabled in release/CI builds; never a default feature.
+dev = []
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }

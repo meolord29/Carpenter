@@ -1,5 +1,12 @@
 # Build order
 
+> **Historical — completed.** This was the phased plan used to build carpenter
+> (phases 1–13 all landed). Kept for rationale and because
+> [design/17](17-cross-platform.md) / [adr/012](../adr/012-cross-platform-paths.md)
+> reference its phase numbers. The living workflow is in
+> [19-dev-build.md](19-dev-build.md) (dev/release stages) and
+> [AGENTS.md](../../AGENTS.md).
+
 1. Skeleton: `Cargo.toml` (workspace: `carpenter` + `xtask`); `app.rs` + `_emit`
    + `output` + `error` + `store`; clap wiring for a couple of commands. Add
    `#![deny(missing_docs)]` at the crate root and the `build.rs` syn scanner
