@@ -5,7 +5,7 @@
 |-----|-------|-------------|
 | `build <path>` | target dir | `{"path":"/courses/ds","slug":"ds","created":["course.json","course.db","lessons/"]}` — scaffolds course.json + course.db + lessons/ |
 | `install [--bin-dir <p>]` | — | `{"installed":true,"bin":"~/.local/bin/carpenter","on_path":true}` — `on_path` = whether `bin_dir` resolves on `$PATH` |
-| `upgrade [--source <p>] [--bin-dir <p>] [--no-skill]` | source dir (`--source` → config `source_dir` → error) | `{"upgraded":true,"version":"0.5.0","bin":"~/.local/bin/carpenter","source":"/src/carpenter","skill":{"app":"opencode","path":"~/.config/opencode/skills/carpenter/SKILL.md","refreshed":true}}` — `skill` outcomes: `{refreshed:true,…}` · `{refreshed:false,reason:"not_registered",warning:"…"}` · `--no-skill` ⇒ `skill:null` |
+| `upgrade [--source <p>] [--bin-dir <p>] [--no-skill]` | source dir (`--source` → config `source_dir` → error) | `{"upgraded":true,"version":"0.6.0","bin":"~/.local/bin/carpenter","source":"/src/carpenter","skill":{"app":"opencode","path":"~/.config/opencode/skills/carpenter/SKILL.md","refreshed":true}}` — `skill` outcomes: `{refreshed:true,…}` · `{refreshed:false,reason:"not_registered",warning:"…"}` · `--no-skill` ⇒ `skill:null` |
 <!-- END GENERATED -->
 
 `upgrade` source resolves `--source` → `config source_dir` → `ValidationError`
