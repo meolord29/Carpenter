@@ -1,4 +1,4 @@
-//! e2e: `upgrade` release mode against a `file://` fixture (adr/016) — the
+//! e2e: `upgrade` release mode against a `file://` fixture (adr/018) — the
 //! fixture reproduces the release layout (`tarball` + `SHA256SUMS`) using the
 //! real test binary, then `upgrade` must download-verify-extract-probe-replace
 //! and re-register the skill.

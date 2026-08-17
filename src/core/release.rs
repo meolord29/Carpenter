@@ -1,4 +1,4 @@
-//! Published-release fetching for `upgrade` (adr/016): map the running platform
+//! Published-release fetching for `upgrade` (adr/018): map the running platform
 //! to a release asset, download + checksum-verify + extract it via subprocess
 //! tools (`curl`, `tar`, `sha256sum`/`shasum`) — the same pipeline
 //! `scripts/install.sh` uses, so the two paths cannot drift.

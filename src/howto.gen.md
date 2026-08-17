@@ -57,6 +57,8 @@ Result (one envelope on stdout):
 {"status":"ok","message":"course created: data-structures","data":{"slug":"data-structures","title":"Data Structures","path":"/…/courses/data-structures"}}
 ```
 
+A provided `slug` must be kebab-case (`^[a-z0-9]+(-[a-z0-9]+)*$`, max 60 — adr/017); anything else is a ValidationError, and the slug is never auto-mangled. Omit `slug` to derive it from the title.
+
 ### list
 
 List courses.
@@ -246,7 +248,7 @@ Result (one envelope on stdout):
 {"status":"ok","message":"plan confirmed: pl1","data":{"id":"pl1","confirmed":true,"confirmed_at":"2026-08-09T12:00:00Z","goals_created":["g1","g2"]}}
 ```
 
-Course scope materializes one goal per `goals[]` entry (ids resolved now); lesson scope creates none. Confirming twice is a Conflict.
+Course scope materializes one goal per `goals[]` entry (ids resolved now); lesson scope creates none. Confirming twice is a Conflict. `links` must reference lesson ids that already exist (unresolvable id ⇒ ValidationError — create the lessons first). A confirmed goal derives `achieved` only when every `covered_by` lesson is `complete`; skipped lessons are excluded.
 
 ### update
 
@@ -407,6 +409,7 @@ Input spec (`--spec <FILE|->`):
 ```yaml
 title: Arrays 101
 slug: arrays-101
+order: 1                  # optional; omitted ⇒ appended (max(ord)+1, atomic)
 sections:
   - title: What is an array
     snippets:
@@ -443,7 +446,7 @@ Result (one envelope on stdout):
 {"status":"ok","message":"lesson created: arrays-101","data":{"id":"arrays-101","slug":"arrays-101","path":"<root>/courses/<slug>/lessons/01-arrays-101","counts":{"sections":1,"practice":1,"quizzes":1,"cases":2}}}
 ```
 
-`sections[].snippets[0].kind` must be `markdown`. Array index ⇒ `ord`. `compare` defaults to `exact`.
+`sections[].snippets[0].kind` must be `markdown`. Array index ⇒ `ord`. `compare` defaults to `exact`. A provided `slug` must be kebab-case (`^[a-z0-9]+(-[a-z0-9]+)*$`, max 60 — adr/017); a derived slug always is. Omit `order` to append atomically (`max(ord)+1` inside the insert statement, unique by index); an explicit `order` colliding with an existing lesson's is a `Conflict` (`"lesson ord N already taken"`). Concurrent creates are safe; for a fixed sequence prefer explicit `order`s or create sequentially.
 
 ### get
 
@@ -587,7 +590,7 @@ Result (one envelope on stdout):
 {"status":"ok","message":"lesson synced: arrays-101","data":{"id":"arrays-101","synced":true,"conflicts":[]}}
 ```
 
-3-way stub preservation: learner edits to stub cells are kept; conflicts surface in `conflicts[]`.
+3-way stub preservation: learner edits to stub cells are kept; conflicts surface in `conflicts[]`. `--force` is required only when the sync would discard learner edits (unresolved conflicts); a clean sync succeeds without it. A synced notebook differs cosmetically from a freshly rendered one (single-string `source` fields, cleared outputs) — both parse identically; never normalize one by hand.
 
 ### execute
 
@@ -607,7 +610,7 @@ Result (one envelope on stdout):
 {"status":"ok","message":"lesson executed: arrays-101","data":{"id":"arrays-101","executed":true,"cells":{"total":3,"ran":3,"errored":0},"errors":[]}}
 ```
 
-Requires the course venv (`carpenter venv create`) else StoreError. `--allow-errors` runs every cell and returns all errors instead of aborting on the first.
+Requires the course venv (`carpenter venv create`) else StoreError. `--allow-errors` runs every cell and returns all errors instead of aborting on the first. Check cells run during execution and write live practice `pass_or_fail` (stdout shows `PASS`/`FAIL <id> <case>`, never the expected value) — practice is scored by executing, quizzes by `quiz run`. Notebook execution is serialized per course (adr/017): a concurrent `lesson execute`/`quiz run` in the same course waits (up to 120 s) on an execution lock, then fails with a clear StoreError.
 
 ### verify
 
@@ -657,7 +660,8 @@ Result (one envelope on stdout):
 re-verifies stored solutions post-create (`owner_id` = `p1`/`q1`…). Requires
 `carpenter venv create`. A checkable without a `solution` reports
 `has_solution:false`; its cases fail with `error:"no solution"`. Results carry
-`actual`/`error`, never `expected` (adr/015).
+`actual`/`error`, never `expected` (adr/015); `actual` is string-encoded
+(e.g. `"actual":"0.25"`), so compare it textually, not as JSON numbers.
 
 ### new
 
@@ -731,7 +735,7 @@ Result (one envelope on stdout):
 {"status":"ok","message":"quizzes run: arrays-101","data":{"lesson_id":"arrays-101","quizzes":[{"quiz_id":"q1","skipped":false,"pass_or_fail":true,"passed":1,"total":1,"cases":[{"case_id":"c1","passed":true}]}],"saved":true}}
 ```
 
-Requires the course venv. Writes live `pass_or_fail` per quiz; skipped quizzes report `skipped:true`.
+Requires the course venv. Writes live `pass_or_fail` per quiz; skipped quizzes report `skipped:true`. Notebook execution is serialized per course (adr/017): a concurrent `quiz run`/`lesson execute` in the same course waits (up to 120 s) on an execution lock, then fails with a clear StoreError.
 
 ### list
 
@@ -1285,7 +1289,7 @@ carpenter register --app opencode
 
 Result (one envelope on stdout):
 ```json
-{"status":"ok","message":"skill registered: opencode","data":{"app":"opencode","path":"/…/opencode/skills/carpenter/SKILL.md","version":"0.5.0","installed":true}}
+{"status":"ok","message":"skill registered: opencode","data":{"app":"opencode","path":"/…/opencode/skills/carpenter/SKILL.md","version":"0.7.0","installed":true}}
 ```
 
 Writes `SKILL.md` + merges the `permission.skill.carpenter="allow"` entry. `--print-skill` prints the rendered bytes instead (no FS change).
@@ -1363,7 +1367,7 @@ carpenter upgrade --bin-dir ~/.local/bin
 
 Result (one envelope on stdout):
 ```json
-{"status":"ok","message":"upgraded: 0.5.0","data":{"upgraded":true,"version":"0.5.0","bin":"/home/u/.local/bin/carpenter","source":"https://github.com/meolord29/Carpenter/releases/download/edge/carpenter-x86_64-unknown-linux-musl.tar.gz","skill":{"refreshed":true,"app":"opencode","path":"/home/u/.config/opencode/skills/carpenter/SKILL.md"}}}
+{"status":"ok","message":"upgraded: 0.7.0","data":{"upgraded":true,"version":"0.7.0","bin":"/home/u/.local/bin/carpenter","source":"https://github.com/meolord29/Carpenter/releases/download/edge/carpenter-x86_64-unknown-linux-musl.tar.gz","skill":{"refreshed":true,"app":"opencode","path":"/home/u/.config/opencode/skills/carpenter/SKILL.md"}}}
 ```
 
 Fetches the GitHub `edge` release (checksum-verified), replaces the binary, and
@@ -1391,7 +1395,7 @@ carpenter link register
 
 Result (one envelope on stdout):
 ```json
-{"status":"ok","message":"link manifest emitted","data":{"name":"carpenter","version":"0.5.0","bin":"/…/carpenter","summary":"Agent-driven CLI that builds Python/Jupyter learning material.","howto_excerpt":"Run `carpenter howto` for the full, always-current command manual.","commands":["course","lesson","plan","quiz","howto"]}}
+{"status":"ok","message":"link manifest emitted","data":{"name":"carpenter","version":"0.7.0","bin":"/…/carpenter","summary":"Agent-driven CLI that builds Python/Jupyter learning material.","howto_excerpt":"Run `carpenter howto` for the full, always-current command manual.","commands":["course","lesson","plan","quiz","howto"]}}
 ```
 
 Future CLI registry manifest. Read-only emit.
@@ -1402,10 +1406,10 @@ Multi-command workflows composed toward one goal ([adr/013](../docs/adr/013-comp
 
 ### Build a course end-to-end
 
-A canonical agent workflow: scaffold a course, set goals and link them to
-covering lessons, author one lesson, verify it runs, score the fresh notebook,
-and roll up progress. Running example: a computational-linear-algebra course
-(`linalg-for-ml`). Repeat the `lesson create` step for each lesson in the outline.
+A canonical agent workflow: scaffold a course, author one lesson, set goals and
+link them to covering lessons, verify the lesson runs, score the fresh
+notebook, and roll up progress. Running example: a computational-linear-algebra
+course (`linalg-for-ml`). Repeat the `lesson create` step for each lesson in the outline.
 
 The fenced ` ```sh ` blocks below are the real flow; the ` ```yaml ` blocks are
 the specs and the ` ```json ` blocks are the result envelopes. (Only the `sh`
@@ -1438,32 +1442,7 @@ carpenter -c linalg-for-ml venv create --python 3.12
 carpenter -c linalg-for-ml venv add numpy
 ```
 
-#### 3. Set goals and link covering lessons
-
-```sh
-carpenter -c linalg-for-ml plan create --scope course --spec <plan-spec>.yaml
-carpenter -c linalg-for-ml plan confirm pl1
-```
-
-`<plan-spec>.yaml` (`links` keys MUST be `goal_index_<i>` — the 0-based index into `goals[]`):
-```yaml
-title: "Computational Linear Algebra for ML — Learning Goals"
-goals:
-  - Represent vectors and matrices in NumPy and compute products.
-  - Solve linear systems via elimination and LU.
-  - Apply eigenvalues, eigenvectors, and the SVD.
-  - Apply linear algebra to ML: regression, PCA, nets, classification.
-links:
-  goal_index_0: [vectors-refresher, matrices-refresher]
-  goal_index_1: [systems-and-elimination, lu-decomposition]
-  goal_index_2: [determinants-and-eigenvectors, svd]
-  goal_index_3: [ml-linear-regression, ml-pca, ml-neural-network]
-```
-```json
-{"status":"ok","message":"plan confirmed: pl1","data":{"id":"pl1","confirmed":true,"goals_created":["g1","g2","g3","g4"]}}
-```
-
-#### 4. Author a lesson (renders notebook + verification-only helper)
+#### 3. Author a lesson (renders notebook + verification-only helper)
 
 ```sh
 carpenter -c linalg-for-ml lesson create --spec <lesson-spec>.yaml
@@ -1511,6 +1490,36 @@ quizzes:
 ```
 ```json
 {"status":"ok","message":"lesson created: vectors-refresher","data":{"id":"vectors-refresher","slug":"vectors-refresher","path":"<root>/courses/linalg-for-ml/lessons/01-vectors-refresher","counts":{"sections":1,"practice":1,"quizzes":1,"cases":2}}}
+```
+
+#### 4. Set goals and link covering lessons
+
+`links` must reference lesson ids that **already exist** — confirming a plan
+whose links name unknown lessons fails with
+`{"status":"error","code":"ValidationError","message":"validation error: unresolvable lesson id in links: <id>"}`,
+so create the lessons first (step 3).
+
+```sh
+carpenter -c linalg-for-ml plan create --scope course --spec <plan-spec>.yaml
+carpenter -c linalg-for-ml plan confirm pl1
+```
+
+`<plan-spec>.yaml` (`links` keys MUST be `goal_index_<i>` — the 0-based index into `goals[]`):
+```yaml
+title: "Computational Linear Algebra for ML — Learning Goals"
+goals:
+  - Represent vectors and matrices in NumPy and compute products.
+  - Solve linear systems via elimination and LU.
+  - Apply eigenvalues, eigenvectors, and the SVD.
+  - Apply linear algebra to ML: regression, PCA, nets, classification.
+links:
+  goal_index_0: [vectors-refresher, matrices-refresher]
+  goal_index_1: [systems-and-elimination, lu-decomposition]
+  goal_index_2: [determinants-and-eigenvectors, svd]
+  goal_index_3: [ml-linear-regression, ml-pca, ml-neural-network]
+```
+```json
+{"status":"ok","message":"plan confirmed: pl1","data":{"id":"pl1","confirmed":true,"confirmed_at":"2026-08-09T12:00:00Z","goals_created":["g1","g2","g3","g4"]}}
 ```
 
 #### 5. Verify the teaching cells run clean
@@ -1568,4 +1577,192 @@ should run while authoring each lesson:
   eigenvectors (sign ambiguity) or raw `inv` output.
 - **Never hand-edit a rendered `lesson.ipynb`.** Regenerate only via
   `lesson create` / `lesson update` / `lesson sync`.
+
+### Maintain a lesson after learner edits
+
+The authoring maintenance loop: push a content fix to a lesson that learners
+have already edited, without destroying their stub work, then re-verify the
+answer key and re-score. Running example: `arrays-101` in the `ds` course.
+
+The fenced ` ```sh ` blocks below are the real flow; the ` ```yaml ` blocks are
+the specs and the ` ```json ` blocks are the result envelopes. (Only the `sh`
+blocks are counted by the compile-time scenario gate — see
+`docs/adr/013-compile-enforced-scenarios.md`.)
+
+#### 1. Update the lesson (destructive — requires --force)
+
+`lesson update` replaces the DB content and re-renders the notebook. `--force`
+is the confirmation that you accept the rewrite.
+
+```sh
+carpenter -c ds lesson update arrays-101 --spec <lesson-spec>.yaml --force
+```
+```json
+{"status":"ok","message":"lesson updated: arrays-101","data":{"id":"arrays-101","updated":{"id":"arrays-101","slug":"arrays-101","title":"Arrays 101","ord":1,"status":"in_progress","skip":false,"created_at":"2026-08-09T12:00:00Z","updated_at":"2026-08-10T09:00:00Z"}}}
+```
+
+#### 2. Sync learner edits back (3-way stub preservation)
+
+If the notebook was updated out-of-band (or you want the DB state re-rendered
+without clobbering learner stub edits), `lesson sync` performs a 3-way merge:
+learner edits to stub cells are kept; anything unresolvable surfaces in
+`conflicts[]`. A clean sync needs no `--force`.
+
+```sh
+carpenter -c ds lesson sync arrays-101
+```
+```json
+{"status":"ok","message":"lesson synced: arrays-101","data":{"id":"arrays-101","synced":true,"conflicts":[]}}
+```
+
+#### 3. Re-verify the answer key
+
+`lesson verify <id>` re-runs the stored author solutions against their own
+cases in the course venv — after an update, this proves the new key is
+self-consistent before any learner sees it (adr/015).
+
+```sh
+carpenter -c ds lesson verify arrays-101
+```
+```json
+{"status":"ok","message":"lesson verified: arrays-101","data":{"lesson_id":"arrays-101","checked":2,"passing":2,"failing":0,"checkables":[{"owner_type":"practice","owner_id":"p1","name":"sum_array","has_solution":true,"passed":1,"total":1,"cases":[{"case_id":"c1","passed":true}]},{"owner_type":"quiz","owner_id":"q1","name":"max_value","has_solution":true,"passed":1,"total":1,"cases":[{"case_id":"c2","passed":true}]}]}}
+```
+
+#### 4. Re-execute and re-score
+
+Confirm the teaching cells still run clean, then score the notebooks.
+
+```sh
+carpenter -c ds lesson execute arrays-101 --allow-errors
+```
+```json
+{"status":"ok","message":"lesson executed: arrays-101","data":{"id":"arrays-101","executed":true,"cells":{"total":7,"ran":7,"errored":0},"errors":[]}}
+```
+
+```sh
+carpenter -c ds quiz run arrays-101
+```
+```json
+{"status":"ok","message":"quizzes run: arrays-101","data":{"lesson_id":"arrays-101","quizzes":[{"quiz_id":"q1","skipped":false,"pass_or_fail":false,"passed":0,"total":1,"cases":[{"case_id":"c2","passed":false,"error":"NotImplementedError: "}]}],"saved":true}}
+```
+
+#### Conventions (maintenance discipline)
+
+- Never hand-edit a rendered `lesson.ipynb` — regenerate via `lesson update` /
+  `lesson sync`.
+- Notebook execution is serialized per course (adr/017): a concurrent
+  `lesson execute`/`quiz run` waits on an execution lock (up to 120 s), so
+  step 4's two commands run in order even if issued together.
+- After a content change, always end the loop at `quiz run`: fresh state is
+  all quizzes `pass_or_fail:false` until learners re-attempt.
+
+### Tutor feedback loop
+
+The live-tutoring half of carpenter: score a learner's quizzes, inspect the
+last check, exclude a broken quiz from status derivation, record the gap as a
+note, and roll up progress. Running example: an `arrays-101` lesson in the
+`ds` course that the learner has partially attempted.
+
+The fenced ` ```sh ` blocks below are the real flow; the ` ```yaml ` blocks are
+the specs and the ` ```json ` blocks are the result envelopes. (Only the `sh`
+blocks are counted by the compile-time scenario gate — see
+`docs/adr/013-compile-enforced-scenarios.md`.)
+
+#### 1. Score the quizzes
+
+`quiz run` executes the notebook in the course venv; helper cells write live
+`pass_or_fail` per quiz. A wrong learner answer fails its case (never showing
+the expected value).
+
+```sh
+carpenter -c ds quiz run arrays-101
+```
+```json
+{"status":"ok","message":"quizzes run: arrays-101","data":{"lesson_id":"arrays-101","quizzes":[{"quiz_id":"q1","skipped":false,"pass_or_fail":true,"passed":1,"total":1,"cases":[{"case_id":"c1","passed":true}]},{"quiz_id":"q2","skipped":false,"pass_or_fail":false,"passed":0,"total":2,"cases":[{"case_id":"c2","passed":false,"error":"AssertionError: "},{"case_id":"c3","passed":false,"error":"NotImplementedError: "}]}],"saved":true}}
+```
+
+#### 2. Inspect the last check
+
+`quiz results` replays the most recent run's saved state without re-executing.
+
+```sh
+carpenter -c ds quiz results q2
+```
+```json
+{"status":"ok","message":"quiz results: q2","data":{"quiz_id":"q2","skipped":false,"pass_or_fail":false,"passed":0,"total":2,"cases":[{"case_id":"c2","passed":false,"error":"AssertionError: "},{"case_id":"c3","passed":false,"error":"NotImplementedError: "}]}}
+```
+
+#### 3. Park a broken quiz
+
+`c3` fails with `NotImplementedError` — the learner never attempted it. Skip
+`q2` for now so lesson status reflects attempted work only; skipped items are
+excluded from status derivation.
+
+```sh
+carpenter -c ds skip q2 --scope quiz
+```
+```json
+{"status":"ok","message":"skip set: quiz q2","data":{"scope":"quiz","id":"q2","skip":true}}
+```
+
+Later, `--off` re-includes it:
+
+```sh
+carpenter -c ds skip q2 --scope quiz --off
+```
+```json
+{"status":"ok","message":"skip cleared: quiz q2","data":{"scope":"quiz","id":"q2","skip":false}}
+```
+
+#### 4. Record the gap
+
+`notes add` captures what the tutor observed, linked to the failing quiz
+(`related_open` surfaces recurring gaps on future notes).
+
+```sh
+carpenter -c ds notes add --spec <note-spec>.yaml
+```
+
+`<note-spec>.yaml`:
+```yaml
+kind: gap
+tags:
+  - base-cases
+recurrence: new
+related: q2
+text: Learner attempts recursion but leaves the base case unimplemented under time pressure.
+```
+```json
+{"status":"ok","message":"note added: n1","data":{"id":"n1","kind":"gap","tags":["base-cases"],"status":"open","recurrence":"new","related":"q2","text":"Learner attempts recursion but leaves the base case unimplemented under time pressure.","related_open":[]}}
+```
+
+```sh
+carpenter -c ds notes list
+```
+```json
+{"status":"ok","message":"notes listed","data":{"notes":[{"id":"n1","kind":"gap","tags":["base-cases"],"status":"open","recurrence":"new","related":"q2","text":"…","related_open":[]}],"errors":[]}}
+```
+
+#### 5. Roll up progress
+
+```sh
+carpenter -c ds progress show
+```
+```json
+{"status":"ok","message":"progress shown","data":{"lessons":[{"id":"arrays-101","title":"Arrays 101","status":"in_progress","skip":false,"passing":1,"total":2}]}}
+```
+
+```sh
+carpenter -c ds progress summary
+```
+```json
+{"status":"ok","message":"progress summarized","data":{"lessons":{"total":1,"complete":0,"in_progress":1,"skipped":0},"quizzes":{"passing":1,"total":2},"goals":{"total":1,"achieved":0},"notes":{"total":1,"open":1,"recurring":0,"by_kind":{"gap":1,"mistake":0,"strength":0,"pattern":0,"progress":0}}}}
+```
+
+#### Conventions (tutor discipline)
+
+- Resolve the note when the gap closes (`notes resolve n1`) — `progress
+  summary` counts open notes by kind.
+- A goal derives `achieved` only when every `covered_by` lesson is `complete`;
+  skipping is the honest way to let a blocked lesson stop counting.
 

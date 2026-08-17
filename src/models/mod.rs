@@ -19,6 +19,10 @@ pub mod register;
 pub mod skip;
 pub mod venv;
 
+// Dev-only models (adr/016). Compiled solely under the `dev` feature.
+#[cfg(feature = "dev")]
+pub mod dev;
+
 pub use self::common::RowError;
 pub use self::course::{CourseCounts, CourseListItem, CourseRow, CourseSpec};
 pub use self::data::Data;

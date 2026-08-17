@@ -11,6 +11,11 @@
 //!
 //! The example file (not an inline `///` fence) is the atom — see the Update
 //! block in adr/007.
+//!
+//! Under the `dev` feature (adr/016) every gate below — plus the scenario gate
+//! (adr/013) — is skipped, and `#![deny(missing_docs)]` is relaxed, so a command
+//! can be compiled and run to capture a real envelope before its atom/test
+//! exist. `dev` + `release` is rejected (no relaxed binary ships).
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -19,6 +24,24 @@ fn main() {
     println!("cargo:rerun-if-changed=src/commands");
     println!("cargo:rerun-if-changed=docs/examples");
     println!("cargo:rerun-if-changed=examples");
+    println!("cargo:rerun-if-changed=Cargo.toml");
+
+    // The `dev` feature (adr/016) relaxes the gates below for the authoring
+    // loop. It must never ship: a release binary built with `dev` would bypass
+    // the self-documentation contract (adr/007) and the scenario floor (adr/013).
+    let dev = std::env::var_os("CARGO_FEATURE_DEV").is_some();
+    if dev && std::env::var("PROFILE").as_deref() == Ok("release") {
+        eprintln!(
+            "error: the `dev` feature relaxes the doc/example/scenario gates \
+             and must not be used in a release build (adr/016)"
+        );
+        std::process::exit(1);
+    }
+    if dev {
+        println!("cargo:warning=dev build: doc/example/scenario gates relaxed (adr/016)");
+        return;
+    }
+
     let dir = Path::new("src/commands");
     let examples = Path::new("docs/examples");
     if !dir.exists() {
@@ -149,22 +172,23 @@ fn gate_scenarios(known: &HashSet<String>, errors: &mut Vec<String>) {
 
 /// Parse one `carpenter …` line into a `<group>::<fn>` (or `<name>::<name>` for
 /// a top-level command) key. Returns `None` for non-invocations / empty lines.
-fn parse_invocation(line: &str, _known: &HashSet<String>) -> Option<String> {
+/// A second token resolves as a subcommand only when `<t0>::<t1>` is a known
+/// command fn; otherwise the line is treated as a top-level fn with its
+/// positional argument (e.g. `skip q1 --scope quiz`, `build /courses/ds`).
+fn parse_invocation(line: &str, known: &HashSet<String>) -> Option<String> {
     let toks: Vec<&str> = line.split_whitespace().collect();
     if toks.first() != Some(&"carpenter") {
         return None;
     }
     let rest = strip_globals(&toks[1..]);
-    if rest.is_empty() {
-        return None;
+    let t0 = *rest.first()?;
+    if let Some(t1) = rest.get(1) {
+        let sub = format!("{t0}::{t1}");
+        if known.contains(&sub) {
+            return Some(sub);
+        }
     }
-    let t0 = rest[0];
-    Some(if rest.len() >= 2 {
-        format!("{}::{}", t0, rest[1])
-    } else {
-        // Top-level command (no group): resolved as `<name>::<name>`.
-        format!("{t0}::{t0}")
-    })
+    Some(format!("{t0}::{t0}"))
 }
 
 /// Drop leading global flags (and the value of any value-taking one) so the

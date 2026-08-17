@@ -1,4 +1,4 @@
-# ADR-016: `upgrade` fetches the published release
+# ADR-018: `upgrade` fetches the published release
 
 Date: 2026-08-17 · Status: Accepted
 

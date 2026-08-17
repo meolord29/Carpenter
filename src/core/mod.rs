@@ -16,3 +16,8 @@ pub mod status;
 pub mod store;
 pub mod time;
 pub mod verify;
+
+// Dev-build-only helpers (adr/016). Compiled solely under the `dev` feature so
+// the surface never reaches a release binary or the generated howto/skill.
+#[cfg(feature = "dev")]
+pub mod dev;

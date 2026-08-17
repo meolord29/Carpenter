@@ -1,6 +1,6 @@
 //! `upgrade` — replace the installed carpenter binary, then update the skill.
 //!
-//! Two modes (adr/016): **release** (default — fetch the GitHub `edge` tarball,
+//! Two modes (adr/018): **release** (default — fetch the GitHub `edge` tarball,
 //! verify its checksum, extract, probe, atomically replace; always (re-)registers
 //! the skill, mirroring `scripts/install.sh`) and **source** (`--source` or
 //! config `source_dir` — rebuild via `cargo xtask build --release`, best-effort
@@ -93,7 +93,7 @@ fn resolve_mode(source: Option<&str>, cfg: &config::Config) -> Result<Mode, Carp
 }
 
 /// Download + verify + extract the release for this platform into a temp stage
-/// dir (removed on drop — adr/016).
+/// dir (removed on drop — adr/018).
 fn upgrade_from_release() -> Result<Staged, CarpenterError> {
     let target = release::platform_target().ok_or_else(|| {
         CarpenterError::ValidationError(format!(

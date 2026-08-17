@@ -1,9 +1,14 @@
 [package]
 name = "carpenter"
-version = "0.5.0"
+version = "0.7.0"
 edition = "2021"
 description = "Agent-driven CLI that builds Python/Jupyter learning material."
 license = "Apache-2.0"
+
+[features]
+# Relaxes the doc/example/scenario gates (adr/016) for the authoring loop.
+# Never enabled in release/CI builds; never a default feature.
+dev = []
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
@@ -14,6 +19,7 @@ dirs = "6"
 rusqlite = { version = "0.31", features = ["bundled"] }
 unicode-normalization = "0.1"
 serde_yml = "0.0.13"
+fs4 = "0.12"
 
 [build-dependencies]
 syn = { version = "2", features = ["full", "parsing", "extra-traits"] }

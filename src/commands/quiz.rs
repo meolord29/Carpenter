@@ -79,22 +79,7 @@ pub fn run(
         )));
     }
     let dir = crate::commands::lesson::lesson_dir(paths, course_slug, &lesson.slug, lesson.ord);
-    let timeout_arg = format!("--ExecutePreprocessor.timeout={timeout}");
-    // Run nbconvert from the lesson dir so the kernel cwd resolves `import helper`
-    // (helper.py lives next to the notebook). `uv run` walks up to find the venv.
-    let args = [
-        "run",
-        "jupyter",
-        "nbconvert",
-        "--execute",
-        "--to",
-        "notebook",
-        "--inplace",
-        "--ExecutePreprocessor.allow_errors=True",
-        timeout_arg.as_str(),
-        "lesson.ipynb",
-    ];
-    exec::run_uv_or_store(&args, &dir)?;
+    exec::run_nbconvert(&course_dir, &dir, timeout)?;
 
     // classify errored cells via scaffold_hash
     let nb_path = dir.join("lesson.ipynb");
@@ -271,5 +256,32 @@ mod tests {
         let (paths, slug) = setup_lesson();
         crate::commands::venv::create(&paths, &slug, None).expect("venv");
         let _ = run(&paths, &slug, "arrays", 30).expect("run");
+    }
+
+    #[test]
+    #[ignore = "needs a course venv + nbconvert (run manually)"]
+    fn run_concurrent_serializes_via_exec_lock() {
+        // adr/017 regression: two concurrent quiz runs in one course used to
+        // collide on a kernel port (ZMQ "Address already in use" → 60 s
+        // startup timeout). The exec lock serializes them; both must succeed.
+        let (paths, slug) = setup_lesson();
+        crate::commands::lesson::create(
+            &paths,
+            &slug,
+            "title: Other\nslug: other\nsections:\n  - title: s\n    snippets:\n      - kind: markdown\n        content: hi\nquizzes:\n  - name: g\n    signature: \"def g(x):\"\n    cases:\n      - args: [2]\n        expected: 2\n",
+        )
+        .expect("create lesson 2");
+        crate::commands::venv::create(&paths, &slug, None).expect("venv");
+        let mut handles = Vec::new();
+        for id in ["arrays", "other"] {
+            let paths = paths.clone();
+            let slug = slug.clone();
+            handles.push(std::thread::spawn(move || {
+                run(&paths, &slug, id, 30).map(|_| ())
+            }));
+        }
+        for h in handles {
+            h.join().expect("thread").expect("run");
+        }
     }
 }

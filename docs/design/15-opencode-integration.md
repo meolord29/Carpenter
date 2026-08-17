@@ -65,7 +65,7 @@ envelopes. `link` (future CLI registry) is a separate concern — see
 
 ## `upgrade` auto-refreshes the skill
 After replacing the binary, `upgrade` updates the skill — how depends on the
-mode (adr/016): **source mode** (`--source` / config `source_dir`) refreshes
+mode (adr/018): **source mode** (`--source` / config `source_dir`) refreshes
 only if the skill file is present (`~/.config/opencode/skills/carpenter/SKILL.md`),
 warns with `reason:"not_registered"` otherwise (the exact warning string is
 single-sourced in [specs/18-build-install-upgrade.md](../specs/18-build-install-upgrade.md);

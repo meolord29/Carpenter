@@ -174,16 +174,21 @@ pub fn create(paths: &Paths, course_slug: &str, spec_text: &str) -> Result<Data,
     let conn = db::open_course(paths, course_slug)?;
     let now = time::now_iso();
     let base = match &spec.slug {
-        Some(s) => s.clone(),
+        Some(s) => {
+            store::validate_slug(s)?;
+            s.clone()
+        }
         None => store::slugify(&spec.title)?,
     };
     let slug = unique_lesson_slug(&conn, &base)?;
-    let ord = spec
-        .order
-        .unwrap_or_else(|| db::next_lesson_ord(&conn).unwrap_or(1));
     let lesson_id = slug.clone();
-
-    db::insert_lesson(&conn, &lesson_id, &slug, &spec.title, ord, &now, &now)?;
+    let ord = match spec.order {
+        Some(o) => {
+            db::insert_lesson(&conn, &lesson_id, &slug, &spec.title, o, &now, &now)?;
+            o
+        }
+        None => db::insert_lesson_auto_ord(&conn, &lesson_id, &slug, &spec.title, &now, &now)?,
+    };
     let counts = insert_lesson_content(&conn, &lesson_id, &spec)?;
 
     let dir = lesson_dir(paths, course_slug, &slug, ord);
@@ -400,21 +405,7 @@ pub fn execute(
         )));
     }
     let dir = lesson_dir(paths, course_slug, &lesson.slug, lesson.ord);
-    // Run nbconvert from the lesson dir so the kernel cwd resolves `import helper`.
-    let timeout_arg = format!("--ExecutePreprocessor.timeout={timeout}");
-    let args = [
-        "run",
-        "jupyter",
-        "nbconvert",
-        "--execute",
-        "--to",
-        "notebook",
-        "--inplace",
-        "--ExecutePreprocessor.allow_errors=True",
-        timeout_arg.as_str(),
-        "lesson.ipynb",
-    ];
-    exec::run_uv_or_store(&args, &dir)?;
+    exec::run_nbconvert(&course_dir, &dir, timeout)?;
 
     let nb_path = dir.join("lesson.ipynb");
     let nb_text = std::fs::read_to_string(&nb_path).map_err(store::io_to_store)?;
@@ -798,13 +789,110 @@ mod tests {
     }
 
     #[test]
+    fn create_rejects_non_kebab_slug() {
+        let (paths, slug) = testutil::setup();
+        let bad = "title: x\nslug: unicode-ñ\nsections:\n  - title: s\n    snippets:\n      - kind: markdown\n        content: x\nquizzes: []\n";
+        let err = create(&paths, &slug, bad).unwrap_err();
+        assert!(matches!(err, CarpenterError::ValidationError(_)), "{err}");
+    }
+
+    #[test]
     fn create_dedups_slug_on_collision() {
         let (paths, slug) = testutil::setup();
         create(&paths, &slug, SPEC).unwrap();
-        let Data::LessonCreate { id, .. } = create(&paths, &slug, SPEC).expect("dup") else {
+        // Same slug, no explicit order: auto-ord allocates the next slot and
+        // the slug dedups (an explicit duplicate `order` is a Conflict —
+        // see create_explicit_duplicate_order_conflicts).
+        let dup_spec = SPEC.replace("order: 1\n", "");
+        let Data::LessonCreate { id, .. } = create(&paths, &slug, &dup_spec).expect("dup") else {
             panic!();
         };
         assert!(id.starts_with("arrays-101-"), "{id}");
+    }
+
+    fn bare_spec(i: usize) -> String {
+        format!(
+            "title: Lesson {i}\nslug: lesson-{i}\nsections:\n  - title: s\n    snippets:\n      - kind: markdown\n        content: x\nquizzes: []\n"
+        )
+    }
+
+    #[test]
+    fn create_concurrent_allocates_distinct_ords() {
+        let (paths, slug) = testutil::setup();
+        let n = 8;
+        let mut handles = Vec::new();
+        for i in 0..n {
+            let paths = paths.clone();
+            let slug = slug.clone();
+            let spec = bare_spec(i);
+            handles.push(std::thread::spawn(move || {
+                create(&paths, &slug, &spec).map(|_| ())
+            }));
+        }
+        for h in handles {
+            h.join().expect("thread").expect("create");
+        }
+        let conn = db::open_course(&paths, &slug).unwrap();
+        let ords = db::list_lessons(&conn)
+            .unwrap()
+            .into_iter()
+            .map(|l| l.ord)
+            .collect::<Vec<_>>();
+        assert_eq!(ords.len(), n);
+        let mut distinct = ords.clone();
+        distinct.sort_unstable();
+        distinct.dedup();
+        assert_eq!(distinct.len(), n, "duplicate ords: {ords:?}");
+    }
+
+    #[test]
+    fn create_explicit_duplicate_order_conflicts() {
+        let (paths, slug) = testutil::setup();
+        create(&paths, &slug, SPEC).unwrap();
+        let dup = "title: Other\nslug: other-lesson\norder: 1\nsections:\n  - title: s\n    snippets:\n      - kind: markdown\n        content: x\nquizzes: []\n";
+        let err = create(&paths, &slug, dup).unwrap_err();
+        assert!(
+            matches!(err, CarpenterError::Conflict(ref m) if m.contains("ord 1")),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn open_resequences_duplicate_ords_and_enforces_index() {
+        let (paths, slug) = testutil::setup();
+        for i in 0..3 {
+            create(&paths, &slug, &bare_spec(i)).unwrap();
+        }
+        {
+            let conn = db::open_course(&paths, &slug).unwrap();
+            // Simulate a legacy dirty DB: drop the uniqueness index a
+            // pre-adr/017 database never had, then corrupt an ord.
+            conn.execute("DROP INDEX idx_lessons_ord", []).unwrap();
+            conn.execute("UPDATE lessons SET ord = 1 WHERE slug = 'lesson-1'", [])
+                .unwrap();
+        }
+        let conn = db::open_course(&paths, &slug).unwrap();
+        let ords = db::list_lessons(&conn)
+            .unwrap()
+            .into_iter()
+            .map(|l| l.ord)
+            .collect::<Vec<_>>();
+        let mut distinct = ords.clone();
+        distinct.sort_unstable();
+        distinct.dedup();
+        assert_eq!(
+            distinct.len(),
+            ords.len(),
+            "duplicate ords survived: {ords:?}"
+        );
+        let idx: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_lessons_ord'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(idx, 1);
     }
 
     #[test]

@@ -19,4 +19,6 @@ sequence are retired decisions (not listed). Read topically; start with the inde
 | 013 | [013-compile-enforced-scenarios.md](013-compile-enforced-scenarios.md) | compile-enforced multi-command scenarios (≥3 distinct fns per `examples/*.md`) |
 | 014 | [014-yaml-spec-input.md](014-yaml-spec-input.md) | YAML is the single `--spec` format (no JSON code path; `serde-yml`) |
 | 015 | [015-reference-solution-verify.md](015-reference-solution-verify.md) | author reference `solution` field + `lesson verify` (answer-key lock) |
-| 016 | [016-upgrade-fetches-release.md](016-upgrade-fetches-release.md) | `upgrade` defaults to fetching the published `edge` release (checksum-verified) |
+| 016 | [016-dev-feature.md](016-dev-feature.md) | `dev` build stage (relaxed gates) + `--capture-example` authoring loop |
+| 017 | [017-concurrency-ords-slugs-exec.md](017-concurrency-ords-slugs-exec.md) | concurrency semantics: atomic+unique lesson ords, slug validation, per-course execution lock |
+| 018 | [018-upgrade-fetches-release.md](018-upgrade-fetches-release.md) | `upgrade` defaults to fetching the published `edge` release (checksum-verified) |
