@@ -34,3 +34,8 @@
    unique.
 
 A slug with no alphanumerics after step 2 ⇒ `ValidationError` (cannot derive).
+
+A **provided** slug (`spec.slug`) is never derived — it is *validated* against
+the same shape (`^[a-z0-9]+(-[a-z0-9]+)*$`, ≤ 60 chars) and rejected otherwise
+(adr/017), so the directory name and the DB row can never diverge on a
+Unicode-normalizing filesystem.

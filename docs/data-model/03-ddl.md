@@ -17,13 +17,19 @@ CREATE TABLE lessons (
   id         TEXT PRIMARY KEY,            -- slug, e.g. arrays-101
   slug       TEXT NOT NULL UNIQUE,
   title      TEXT NOT NULL,
-  ord        INTEGER NOT NULL,
+  ord        INTEGER NOT NULL,            -- unique (idx_lessons_ord, adr/017);
+                                           -- auto = max(ord)+1 inside the insert (atomic);
+                                           -- explicit spec.order colliding => Conflict
   status     TEXT NOT NULL DEFAULT 'not_started'
              CHECK (status IN ('not_started','in_progress','complete','skipped')),
   skip       INTEGER NOT NULL DEFAULT 0,  -- 1 = whole lesson skipped (-> status 'skipped')
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+-- adr/017: enforced by a guarded migration (legacy duplicate ords are
+-- resequenced densely on open, stable by ord, created_at, id).
+CREATE UNIQUE INDEX idx_lessons_ord ON lessons(ord);
 
 CREATE TABLE sections (
   id        TEXT PRIMARY KEY,             -- s1, s2, ...

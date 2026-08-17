@@ -18,7 +18,7 @@ the second you hit Run.
 - **Live progress.** Ask the agent how you're doing — it shows what's done and where
   you're stuck.
 
-> Experimental (`v0.5.0`) · Python/Jupyter · works with
+> Experimental (`v0.7.0`) · Python/Jupyter · works with
 > [opencode](https://opencode.ai) · Apache-2.0
 
 ## Try it
@@ -40,6 +40,23 @@ carpenter register --app opencode
 ```
 
 Needs [Rust](https://rustup.rs) and [`uv`](https://github.com/astral-sh/uv).
+
+## Developing carpenter
+
+Two build stages ([design/19](docs/design/19-dev-build.md)):
+
+- **release** — `cargo xtask build --release`: strict compile-time gates (every
+  command self-documents and is tested) + the ship binary.
+- **dev** — `cargo xtask build --dev`: relaxed gates, so a new command compiles
+  before its worked-example + test exist. `--capture-example` writes the example
+  atom from a real run; the `dev` command group
+  (`check`/`setup`/`clean`/`register`/`upgrade`) drives an isolated `.sandbox`
+  validation loop.
+
+To validate a new command end-to-end, switch to the `carpenter-dev-validate`
+agent (`.opencode/agents/`) — it builds dev, simulates real usage, and pauses for
+your sign-off before release. The repo-local dev skill is written by
+`carpenter dev register`.
 
 ## Learn more
 

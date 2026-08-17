@@ -17,7 +17,10 @@ pub fn create(paths: &Paths, spec_text: &str) -> Result<Data, CarpenterError> {
     let spec: CourseSpec = store::parse_spec(spec_text)?;
     validate_spec(&spec)?;
     let slug = match &spec.slug {
-        Some(s) => s.clone(),
+        Some(s) => {
+            store::validate_slug(s)?;
+            s.clone()
+        }
         None => store::slugify(&spec.title)?,
     };
     let dir = paths.course(&slug);
@@ -244,6 +247,17 @@ mod tests {
         assert!(matches!(err, CarpenterError::ValidationError(_)));
         let err = create(&p, "{[}").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
+        cleanup(&p);
+    }
+
+    #[test]
+    fn create_rejects_non_kebab_slug() {
+        let p = test_paths();
+        let err = create(&p, "title: T\ngoal: g\nslug: unicode-ñ\n").unwrap_err();
+        assert!(matches!(err, CarpenterError::ValidationError(_)), "{err}");
+        let err = create(&p, "title: T\ngoal: g\nslug: Bad_Slug\n").unwrap_err();
+        assert!(matches!(err, CarpenterError::ValidationError(_)), "{err}");
+        assert!(!p.course("unicode-ñ").exists());
         cleanup(&p);
     }
 

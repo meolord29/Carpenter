@@ -16,8 +16,8 @@ use crate::models::Data;
 
 /// Build the full clap command tree (the self-documentation scrape target).
 pub fn cli() -> Command {
-    Command::new("carpenter")
-        .version(env!("CARGO_PKG_VERSION"))
+    let cmd = Command::new("carpenter")
+        .version(VERSION)
         .about("Agent-driven CLI that builds Python/Jupyter learning material.")
         .arg(
             Arg::new("root")
@@ -90,8 +90,35 @@ pub fn cli() -> Command {
             Command::new("link")
                 .about("Link manifest commands (future CLI registry).")
                 .subcommand(Command::new("register").about("Emit the carpenter link manifest.")),
-        )
+        );
+    // `--capture-example <PATH>` exists only in a `--features dev` build
+    // (adr/016). gen-howto runs against a non-dev build of carpenter, so this
+    // arg — and thus the whole dev authoring surface — is invisible to the
+    // committed howto and the inlined SKILL.md.
+    #[cfg(feature = "dev")]
+    let cmd = cmd.arg(
+        Arg::new(crate::core::dev::CAPTURE_FLAG)
+            .long("capture-example")
+            .value_name("PATH")
+            .global(true)
+            .help(
+                "DEV ONLY (adr/016): run normally and also write the \
+                 worked-example atom for this invocation to PATH.",
+            ),
+    );
+    #[cfg(feature = "dev")]
+    let cmd = cmd.subcommand(dev_group());
+    cmd
 }
+
+/// The `--version` string. Suffixes `(dev build)` under the `dev` feature so an
+/// agent can detect it is driving a relaxed-gate binary. `&'static str` because
+/// clap's `.version()` requires it (no runtime formatting).
+#[cfg(not(feature = "dev"))]
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[cfg(feature = "dev")]
+const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), " (dev build)");
 
 fn course_group() -> Command {
     Command::new("course")
@@ -527,83 +554,132 @@ fn deregister_subcommand() -> Command {
         )
 }
 
+/// (dev only, adr/016) the `dev` group: validation-sandbox lifecycle. Compiled
+/// only under the `dev` feature, so it never appears in the release clap surface
+/// the howto is scraped from.
+#[cfg(feature = "dev")]
+fn dev_group() -> Command {
+    Command::new("dev")
+        .about(
+            "DEV ONLY (adr/016): validation lifecycle — check/setup/clean the sandbox \
+             and register/upgrade the local skill.",
+        )
+        .subcommand(Command::new("check").about("DEV ONLY: probe prerequisites (uv, …)."))
+        .subcommand(
+            Command::new("setup").about("DEV ONLY: create the .sandbox validation workspace."),
+        )
+        .subcommand(
+            Command::new("clean").about("DEV ONLY: remove the .sandbox validation workspace."),
+        )
+        .subcommand(Command::new("register").about(
+            "DEV ONLY: write the local .opencode carpenter skill (dev analog of `register`).",
+        ))
+        .subcommand(Command::new("upgrade").about(
+            "DEV ONLY: rebuild the dev binary + refresh the local skill (dev analog of `upgrade`).",
+        ))
+}
+
 fn positional(name: &'static str, help: &'static str) -> Arg {
     Arg::new(name).required(true).help(help)
 }
 
-/// Run the CLI: parse args, dispatch, emit one envelope. Never panics.
+/// Run the CLI: parse args, dispatch, emit exactly one envelope on stdout.
+/// Never panics. Under the `dev` feature, `--capture-example <PATH>` runs the
+/// command normally and additionally writes its worked-example atom (adr/016).
 pub fn run() -> ExitCode {
     let matches = cli().get_matches();
+    if matches.subcommand().is_none() {
+        let _ = cli().print_help();
+        println!();
+        return ExitCode::FAILURE;
+    }
     let paths = paths_from(&matches);
+    let result = dispatch(&paths, &matches);
+    let (stdout, is_error) = core::output::render(result);
+    #[cfg(feature = "dev")]
+    if let Some(path) = matches
+        .get_one::<String>(crate::core::dev::CAPTURE_FLAG)
+        .map(|s| s.as_str())
+    {
+        crate::core::dev::write_capture_example(&matches, path, &stdout);
+    }
+    println!("{stdout}");
+    if is_error {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
+    }
+}
+
+/// Resolve the subcommand to a `Result<Data, _>`. The single envelope is
+/// rendered by [`run`]; splitting dispatch out lets the `--capture-example` hook
+/// observe the result once (instead of re-rendering) and keeps the emit path in
+/// one place.
+fn dispatch(paths: &Paths, matches: &ArgMatches) -> Result<Data, core::error::CarpenterError> {
     match matches.subcommand() {
-        Some(("howto", _)) => emit(commands::howto::howto()),
-        Some(("course", sub)) => emit(course_cmd(&paths, sub)),
-        Some(("plan", sub)) => match active_course(&paths, &matches) {
-            Ok(course) => emit(plan_cmd(&paths, &course, sub)),
-            Err(e) => emit(Err(e)),
+        Some(("howto", _)) => commands::howto::howto(),
+        Some(("course", sub)) => course_cmd(paths, sub),
+        Some(("plan", sub)) => match active_course(paths, matches) {
+            Ok(course) => plan_cmd(paths, &course, sub),
+            Err(e) => Err(e),
         },
-        Some(("goal", sub)) => match active_course(&paths, &matches) {
-            Ok(course) => emit(goal_cmd(&paths, &course, sub)),
-            Err(e) => emit(Err(e)),
+        Some(("goal", sub)) => match active_course(paths, matches) {
+            Ok(course) => goal_cmd(paths, &course, sub),
+            Err(e) => Err(e),
         },
         Some(("lesson", sub)) => {
             // `lesson new` is course-agnostic (pure template emitter); skip
             // course resolution so it works without `-c`/active_course.
             if sub.subcommand_name() == Some("new") {
-                emit(lesson_cmd(&paths, "", sub))
+                lesson_cmd(paths, "", sub)
             } else {
-                match active_course(&paths, &matches) {
-                    Ok(course) => emit(lesson_cmd(&paths, &course, sub)),
-                    Err(e) => emit(Err(e)),
+                match active_course(paths, matches) {
+                    Ok(course) => lesson_cmd(paths, &course, sub),
+                    Err(e) => Err(e),
                 }
             }
         }
-        Some(("quiz", sub)) => match active_course(&paths, &matches) {
-            Ok(course) => emit(quiz_cmd(&paths, &course, sub)),
-            Err(e) => emit(Err(e)),
+        Some(("quiz", sub)) => match active_course(paths, matches) {
+            Ok(course) => quiz_cmd(paths, &course, sub),
+            Err(e) => Err(e),
         },
-        Some(("venv", sub)) => match active_course(&paths, &matches) {
-            Ok(course) => emit(venv_cmd(&paths, &course, sub)),
-            Err(e) => emit(Err(e)),
+        Some(("venv", sub)) => match active_course(paths, matches) {
+            Ok(course) => venv_cmd(paths, &course, sub),
+            Err(e) => Err(e),
         },
-        Some(("skip", m)) => match active_course(&paths, &matches) {
-            Ok(course) => emit(skip_cmd(&paths, &course, m)),
-            Err(e) => emit(Err(e)),
+        Some(("skip", m)) => match active_course(paths, matches) {
+            Ok(course) => skip_cmd(paths, &course, m),
+            Err(e) => Err(e),
         },
-        Some(("progress", sub)) => match active_course(&paths, &matches) {
-            Ok(course) => emit(progress_cmd(&paths, &course, sub)),
-            Err(e) => emit(Err(e)),
+        Some(("progress", sub)) => match active_course(paths, matches) {
+            Ok(course) => progress_cmd(paths, &course, sub),
+            Err(e) => Err(e),
         },
-        Some(("notes", sub)) => match active_course(&paths, &matches) {
-            Ok(course) => emit(notes_cmd(&paths, &course, sub)),
-            Err(e) => emit(Err(e)),
+        Some(("notes", sub)) => match active_course(paths, matches) {
+            Ok(course) => notes_cmd(paths, &course, sub),
+            Err(e) => Err(e),
         },
-        Some(("bug", sub)) => emit(bug_cmd(&paths, sub)),
-        Some(("feature", sub)) => emit(feature_cmd(&paths, sub)),
-        Some(("config", sub)) => emit(config_cmd(&paths, sub)),
-        Some(("register", m)) => emit(register_cmd(&paths, m)),
-        Some(("deregister", m)) => emit(deregister_cmd(&paths, m)),
-        Some(("build", m)) => emit(commands::build::build(&paths, &arg_string(m, "path"))),
+        Some(("bug", sub)) => bug_cmd(paths, sub),
+        Some(("feature", sub)) => feature_cmd(paths, sub),
+        Some(("config", sub)) => config_cmd(paths, sub),
+        Some(("register", m)) => register_cmd(paths, m),
+        Some(("deregister", m)) => deregister_cmd(paths, m),
+        Some(("build", m)) => commands::build::build(paths, &arg_string(m, "path")),
         Some(("install", m)) => {
             let bin_dir = m.get_one::<String>("bin-dir").map(|s| s.as_str());
-            emit(commands::install::install(&paths, bin_dir))
+            commands::install::install(paths, bin_dir)
         }
         Some(("upgrade", m)) => {
             let source = m.get_one::<String>("source").map(|s| s.as_str());
             let bin_dir = m.get_one::<String>("bin-dir").map(|s| s.as_str());
-            emit(commands::upgrade::upgrade(
-                &paths,
-                source,
-                bin_dir,
-                m.get_flag("no-skill"),
-            ))
+            commands::upgrade::upgrade(paths, source, bin_dir, m.get_flag("no-skill"))
         }
-        Some(("link", sub)) => emit(link_cmd(&paths, sub)),
-        _ => {
-            let _ = cli().print_help();
-            println!();
-            ExitCode::FAILURE
-        }
+        Some(("link", sub)) => link_cmd(paths, sub),
+        #[cfg(feature = "dev")]
+        Some(("dev", sub)) => dev_cmd(sub),
+        _ => Err(core::error::CarpenterError::ValidationError(
+            "no subcommand".into(),
+        )),
     }
 }
 
@@ -982,13 +1058,20 @@ fn link_cmd(paths: &Paths, sub: &ArgMatches) -> Result<Data, core::error::Carpen
     }
 }
 
-fn emit(result: Result<Data, core::error::CarpenterError>) -> ExitCode {
-    let (stdout, is_error) = core::output::render(result);
-    println!("{stdout}");
-    if is_error {
-        ExitCode::FAILURE
-    } else {
-        ExitCode::SUCCESS
+/// (dev only, adr/016) dispatch for the `dev` group. cfg-gated alongside the
+/// group itself.
+#[cfg(feature = "dev")]
+fn dev_cmd(sub: &ArgMatches) -> Result<Data, core::error::CarpenterError> {
+    match sub.subcommand() {
+        Some(("check", _)) => crate::core::dev::check(),
+        Some(("setup", _)) => crate::core::dev::setup(),
+        Some(("clean", _)) => crate::core::dev::clean(),
+        Some(("register", _)) => crate::core::dev::register_local(),
+        Some(("upgrade", _)) => crate::core::dev::upgrade_local(),
+        _ => Err(core::error::CarpenterError::ValidationError(format!(
+            "unknown dev subcommand: {:?}",
+            sub.subcommand_name().unwrap_or("(none)")
+        ))),
     }
 }
 
@@ -1019,5 +1102,24 @@ fn cli_has_all_top_level_subcommands() {
         "link",
     ] {
         assert!(names.contains(&expected), "missing {expected}: {names:?}");
+    }
+}
+
+/// (dev only) the `dev` group + its three leaves must exist in a dev build
+/// (absent in release — pinned by the inverse of this in the howto guardrail).
+#[cfg(all(test, feature = "dev"))]
+#[test]
+fn dev_group_present_in_dev_build() {
+    let tree = cli();
+    let dev = tree
+        .get_subcommands()
+        .find(|c| c.get_name() == "dev")
+        .expect("dev group missing in dev build");
+    let leaves: Vec<&str> = dev.get_subcommands().map(|c| c.get_name()).collect();
+    for expected in ["check", "setup", "clean", "register", "upgrade"] {
+        assert!(
+            leaves.contains(&expected),
+            "missing dev {expected}: {leaves:?}"
+        );
     }
 }

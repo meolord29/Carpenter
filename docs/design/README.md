@@ -5,9 +5,8 @@ material. SQLite is the source of truth; notebooks render from it. Read in order
 
 | # | file | topic |
 |---|------|-------|
-| 01 | [overview.md](01-overview.md) | what carpenter is, domain model, IDs, status derivation |
-| 02 | [stack.md](02-stack.md) | crates + tooling |
-| 03 | [architecture.md](03-architecture.md) | module map + layering rules |
+| 01 | [overview.md](01-overview.md) | what carpenter is, domain model, IDs, status derivation, non-goals |
+| 03 | [architecture.md](03-architecture.md) | module map + layering rules + stack (crates + tooling) |
 | 04 | [storage.md](04-storage.md) | filesystem layout |
 | 05 | [notebook-sync.md](05-notebook-sync.md) | render & idempotent sync contract |
 | 06 | [helper.md](06-helper.md) | verification-only self-check helper |
@@ -17,11 +16,16 @@ material. SQLite is the source of truth; notebooks render from it. Read in order
 | 10 | [cli-surface.md](10-cli-surface.md) | command groups |
 | 11 | [data-flow.md](11-data-flow.md) | end-to-end flow |
 | 12 | [testing.md](12-testing.md) | test strategy + gates |
-| 13 | [out-of-scope.md](13-out-of-scope.md) | deferred (YAGNI) |
-| 14 | [build-order.md](14-build-order.md) | phased build plan |
+| 14 | [build-order.md](14-build-order.md) | phased build plan (historical — completed) |
 | 15 | [opencode-integration.md](15-opencode-integration.md) | skill-based agent-app integration (register/deregister) |
 | 16 | [execution.md](16-execution.md) | course venv (uv) + lesson execute + venv-backed quiz run |
 | 17 | [cross-platform.md](17-cross-platform.md) | Linux/macOS/Windows paths, platform module, CI matrix |
 | 18 | [scenarios.md](18-scenarios.md) | multi-command scenario examples (gated, howto+skill-inlined) |
+| 19 | [dev-build.md](19-dev-build.md) | dev build stage, `--capture-example`, + the `dev` command group (check/setup/clean/register/upgrade) (adr/016) |
+
+Numbering gaps are merged docs (one concern per file otherwise): **02 stack** →
+[03 → Stack](03-architecture.md#stack); **13 out-of-scope** →
+[01 → Non-goals](01-overview.md#non-goals-yagni). The leftover `02-stack.md` /
+`13-out-of-scope.md` files are redirect stubs pending deletion.
 
 See also: [data-model/](../data-model/), [specs/](../specs/), [adr/](../adr/).

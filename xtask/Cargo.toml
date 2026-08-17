@@ -1,12 +1,18 @@
 [package]
 name = "xtask"
-version = "0.5.0"
+version = "0.7.0"
 edition = "2021"
 publish = false
 
 [[bin]]
 name = "xtask"
 path = "src/main.rs"
+
+[features]
+# Signal-only feature mirroring carpenter's `dev`: when enabled, the strict-only
+# drift tests below skip (their regenerated surfaces differ under the dev view
+# of `app::cli`). See adr/016.
+dev = []
 
 [dependencies]
 carpenter = { path = ".." }

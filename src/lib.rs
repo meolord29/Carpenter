@@ -5,6 +5,10 @@
 //! rendering, and execution.
 
 #![deny(missing_docs)]
+// In a `--features dev` build the doc/example/scenario gates relax (adr/016).
+// `deny` is overridable by a later `allow` (only `forbid` is sticky), so the
+// `cfg_attr` MUST come after the `deny` for the override to take effect.
+#![cfg_attr(feature = "dev", allow(missing_docs))]
 
 pub mod app;
 pub mod commands;

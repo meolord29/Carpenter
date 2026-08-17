@@ -37,3 +37,16 @@ Stable strings assigned by carpenter (`max+1` per table, never reused).
 - Course/lesson: slug (`data-structures`, `arrays-101`); lesson dir = `NN-slug`.
 - Section `s1..`, Practice `p1..`, Quiz `q1..`, TestCase `c1..`, Note `n1..`,
   Plan `pl1..`, Goal `g1..` (globally unique within their table).
+
+## Non-goals (YAGNI)
+
+_(merged from the former `13-out-of-scope.md`)_
+
+Projects / multi-course aggregation; generic event log (derive from
+notes+timestamps); speculative artifact base / descriptor paths; manual
+hand-prose (use scraped howto); cross-course views; capstone entity;
+concurrency/locking; non-Python runtimes. Revisit only on a concrete need.
+
+(Note: attempt *history* was explicitly removed, not merely deferred — see
+[adr/010](../adr/010-live-check-state.md). Live state lives in
+`pass_or_fail`/`last_check`.)

@@ -16,3 +16,5 @@ Result (one envelope on stdout):
 ```json
 {"status":"ok","message":"course created: data-structures","data":{"slug":"data-structures","title":"Data Structures","path":"/…/courses/data-structures"}}
 ```
+
+A provided `slug` must be kebab-case (`^[a-z0-9]+(-[a-z0-9]+)*$`, max 60 — adr/017); anything else is a ValidationError, and the slug is never auto-mangled. Omit `slug` to derive it from the title.
