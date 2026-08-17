@@ -102,6 +102,31 @@ pub fn slugify(title: &str) -> Result<String, CarpenterError> {
     Ok(slug)
 }
 
+/// Validate a user-provided slug against the slug convention
+/// (`docs/data-model/02-conventions.md`): non-empty, ≤ 60 chars,
+/// `^[a-z0-9]+(-[a-z0-9]+)*$` (single-`-`-joined lowercase ASCII segments).
+///
+/// Derived slugs ([`slugify`]) satisfy this by construction; a *provided*
+/// slug must be checked so the course/lesson directory name and the DB row
+/// can never diverge on a Unicode-normalizing filesystem (adr/017).
+pub fn validate_slug(slug: &str) -> Result<(), CarpenterError> {
+    let shape_ok = |s: &str| {
+        !s.is_empty()
+            && !s.starts_with('-')
+            && !s.ends_with('-')
+            && !s.contains("--")
+            && s.bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+    };
+    if slug.len() > 60 || !shape_ok(slug) {
+        return Err(CarpenterError::ValidationError(format!(
+            "invalid slug {slug:?}: must be non-empty kebab-case (lowercase ascii \
+             [a-z0-9] segments joined by single '-', max 60 chars)"
+        )));
+    }
+    Ok(())
+}
+
 /// Map an [`std::io::Error`] to [`CarpenterError::StoreError`].
 pub fn io_to_store(e: std::io::Error) -> CarpenterError {
     CarpenterError::StoreError(e.to_string())
@@ -224,6 +249,37 @@ fn slugify_truncates_at_60() {
 #[test]
 fn slugify_non_ascii_collapses_to_dash() {
     assert_slug("Café ☕", "caf");
+}
+
+#[cfg(test)]
+#[test]
+fn validate_slug_accepts_kebab_case() {
+    for ok in ["a", "data-structures", "linalg-for-ml", "b2b-funnel-42"] {
+        validate_slug(ok).unwrap_or_else(|e| panic!("{ok}: {e}"));
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn validate_slug_rejects_non_kebab_shapes() {
+    for bad in [
+        "",
+        "-leading",
+        "trailing-",
+        "double--dash",
+        "Upper",
+        "under_score",
+        "space in",
+        "unicode-ñ",
+        "日本",
+        "dot.slug",
+        &"x".repeat(61),
+    ] {
+        assert!(
+            matches!(validate_slug(bad), Err(CarpenterError::ValidationError(_))),
+            "{bad:?} should be rejected"
+        );
+    }
 }
 
 #[cfg(test)]

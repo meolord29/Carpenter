@@ -8,6 +8,7 @@ Input spec (`--spec <FILE|->`):
 ```yaml
 title: Arrays 101
 slug: arrays-101
+order: 1                  # optional; omitted ⇒ appended (max(ord)+1, atomic)
 sections:
   - title: What is an array
     snippets:
@@ -44,4 +45,4 @@ Result (one envelope on stdout):
 {"status":"ok","message":"lesson created: arrays-101","data":{"id":"arrays-101","slug":"arrays-101","path":"<root>/courses/<slug>/lessons/01-arrays-101","counts":{"sections":1,"practice":1,"quizzes":1,"cases":2}}}
 ```
 
-`sections[].snippets[0].kind` must be `markdown`. Array index ⇒ `ord`. `compare` defaults to `exact`.
+`sections[].snippets[0].kind` must be `markdown`. Array index ⇒ `ord`. `compare` defaults to `exact`. A provided `slug` must be kebab-case (`^[a-z0-9]+(-[a-z0-9]+)*$`, max 60 — adr/017); a derived slug always is. Omit `order` to append atomically (`max(ord)+1` inside the insert statement, unique by index); an explicit `order` colliding with an existing lesson's is a `Conflict` (`"lesson ord N already taken"`). Concurrent creates are safe; for a fixed sequence prefer explicit `order`s or create sequentially.

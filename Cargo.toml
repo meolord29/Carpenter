@@ -19,6 +19,7 @@ dirs = "6"
 rusqlite = { version = "0.31", features = ["bundled"] }
 unicode-normalization = "0.1"
 serde_yml = "0.0.13"
+fs4 = "0.12"
 
 [build-dependencies]
 syn = { version = "2", features = ["full", "parsing", "extra-traits"] }

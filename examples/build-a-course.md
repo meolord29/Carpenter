@@ -1,9 +1,9 @@
 # Build a course end-to-end
 
-A canonical agent workflow: scaffold a course, set goals and link them to
-covering lessons, author one lesson, verify it runs, score the fresh notebook,
-and roll up progress. Running example: a computational-linear-algebra course
-(`linalg-for-ml`). Repeat the `lesson create` step for each lesson in the outline.
+A canonical agent workflow: scaffold a course, author one lesson, set goals and
+link them to covering lessons, verify the lesson runs, score the fresh
+notebook, and roll up progress. Running example: a computational-linear-algebra
+course (`linalg-for-ml`). Repeat the `lesson create` step for each lesson in the outline.
 
 The fenced ` ```sh ` blocks below are the real flow; the ` ```yaml ` blocks are
 the specs and the ` ```json ` blocks are the result envelopes. (Only the `sh`
@@ -36,32 +36,7 @@ carpenter -c linalg-for-ml venv create --python 3.12
 carpenter -c linalg-for-ml venv add numpy
 ```
 
-## 3. Set goals and link covering lessons
-
-```sh
-carpenter -c linalg-for-ml plan create --scope course --spec <plan-spec>.yaml
-carpenter -c linalg-for-ml plan confirm pl1
-```
-
-`<plan-spec>.yaml` (`links` keys MUST be `goal_index_<i>` — the 0-based index into `goals[]`):
-```yaml
-title: "Computational Linear Algebra for ML — Learning Goals"
-goals:
-  - Represent vectors and matrices in NumPy and compute products.
-  - Solve linear systems via elimination and LU.
-  - Apply eigenvalues, eigenvectors, and the SVD.
-  - Apply linear algebra to ML: regression, PCA, nets, classification.
-links:
-  goal_index_0: [vectors-refresher, matrices-refresher]
-  goal_index_1: [systems-and-elimination, lu-decomposition]
-  goal_index_2: [determinants-and-eigenvectors, svd]
-  goal_index_3: [ml-linear-regression, ml-pca, ml-neural-network]
-```
-```json
-{"status":"ok","message":"plan confirmed: pl1","data":{"id":"pl1","confirmed":true,"goals_created":["g1","g2","g3","g4"]}}
-```
-
-## 4. Author a lesson (renders notebook + verification-only helper)
+## 3. Author a lesson (renders notebook + verification-only helper)
 
 ```sh
 carpenter -c linalg-for-ml lesson create --spec <lesson-spec>.yaml
@@ -109,6 +84,36 @@ quizzes:
 ```
 ```json
 {"status":"ok","message":"lesson created: vectors-refresher","data":{"id":"vectors-refresher","slug":"vectors-refresher","path":"<root>/courses/linalg-for-ml/lessons/01-vectors-refresher","counts":{"sections":1,"practice":1,"quizzes":1,"cases":2}}}
+```
+
+## 4. Set goals and link covering lessons
+
+`links` must reference lesson ids that **already exist** — confirming a plan
+whose links name unknown lessons fails with
+`{"status":"error","code":"ValidationError","message":"validation error: unresolvable lesson id in links: <id>"}`,
+so create the lessons first (step 3).
+
+```sh
+carpenter -c linalg-for-ml plan create --scope course --spec <plan-spec>.yaml
+carpenter -c linalg-for-ml plan confirm pl1
+```
+
+`<plan-spec>.yaml` (`links` keys MUST be `goal_index_<i>` — the 0-based index into `goals[]`):
+```yaml
+title: "Computational Linear Algebra for ML — Learning Goals"
+goals:
+  - Represent vectors and matrices in NumPy and compute products.
+  - Solve linear systems via elimination and LU.
+  - Apply eigenvalues, eigenvectors, and the SVD.
+  - Apply linear algebra to ML: regression, PCA, nets, classification.
+links:
+  goal_index_0: [vectors-refresher, matrices-refresher]
+  goal_index_1: [systems-and-elimination, lu-decomposition]
+  goal_index_2: [determinants-and-eigenvectors, svd]
+  goal_index_3: [ml-linear-regression, ml-pca, ml-neural-network]
+```
+```json
+{"status":"ok","message":"plan confirmed: pl1","data":{"id":"pl1","confirmed":true,"confirmed_at":"2026-08-09T12:00:00Z","goals_created":["g1","g2","g3","g4"]}}
 ```
 
 ## 5. Verify the teaching cells run clean

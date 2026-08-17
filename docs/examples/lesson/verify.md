@@ -39,4 +39,5 @@ Result (one envelope on stdout):
 re-verifies stored solutions post-create (`owner_id` = `p1`/`q1`…). Requires
 `carpenter venv create`. A checkable without a `solution` reports
 `has_solution:false`; its cases fail with `error:"no solution"`. Results carry
-`actual`/`error`, never `expected` (adr/015).
+`actual`/`error`, never `expected` (adr/015); `actual` is string-encoded
+(e.g. `"actual":"0.25"`), so compare it textually, not as JSON numbers.

@@ -172,22 +172,23 @@ fn gate_scenarios(known: &HashSet<String>, errors: &mut Vec<String>) {
 
 /// Parse one `carpenter …` line into a `<group>::<fn>` (or `<name>::<name>` for
 /// a top-level command) key. Returns `None` for non-invocations / empty lines.
-fn parse_invocation(line: &str, _known: &HashSet<String>) -> Option<String> {
+/// A second token resolves as a subcommand only when `<t0>::<t1>` is a known
+/// command fn; otherwise the line is treated as a top-level fn with its
+/// positional argument (e.g. `skip q1 --scope quiz`, `build /courses/ds`).
+fn parse_invocation(line: &str, known: &HashSet<String>) -> Option<String> {
     let toks: Vec<&str> = line.split_whitespace().collect();
     if toks.first() != Some(&"carpenter") {
         return None;
     }
     let rest = strip_globals(&toks[1..]);
-    if rest.is_empty() {
-        return None;
+    let t0 = *rest.first()?;
+    if let Some(t1) = rest.get(1) {
+        let sub = format!("{t0}::{t1}");
+        if known.contains(&sub) {
+            return Some(sub);
+        }
     }
-    let t0 = rest[0];
-    Some(if rest.len() >= 2 {
-        format!("{}::{}", t0, rest[1])
-    } else {
-        // Top-level command (no group): resolved as `<name>::<name>`.
-        format!("{t0}::{t0}")
-    })
+    Some(format!("{t0}::{t0}"))
 }
 
 /// Drop leading global flags (and the value of any value-taking one) so the

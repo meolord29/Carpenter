@@ -4,7 +4,9 @@ description: >-
   course-project input to actively hunt CLI interaction failures, missing
   --help explanations, and missing worked examples/scenarios. Prescribes
   missing examples (never authors them); reports every failure + code-level gap
-  to the user. Strict sandbox; no source access; uv required.
+  to the user. Strict sandbox; no source access; uv required. Drives the CLI
+  the way a real user studies — sequentially, one lesson at a time; never
+  invokes lessons concurrently.
 mode: primary
 permission:
   read:
@@ -174,10 +176,36 @@ Scaffold the corpus: `course create` → `venv create` → `venv add <topic deps
 
 ## Phase C — Active failure-hunt
 
-Drive the full chain with the user's corpus (course → plan create → plan confirm
-→ lesson create → lesson execute → quiz run → progress summary), and at **every**
-command probe the failure-hunting catalog below. Parse every envelope
-(`status`, `code`, `data`) and record observed vs documented.
+### Model the real user (sequential study)
+
+A learner studies **one lesson at a time** — the corpus must be driven exactly
+that way. The execution pattern is a per-lesson loop, fully finishing one
+lesson before touching the next:
+
+```
+for each lesson in the approved outline:
+    lesson verify --spec <lesson-spec>.yaml   # lock the answer key first
+    lesson create  --spec <lesson-spec>.yaml
+    lesson execute <id> --allow-errors
+    quiz run <id>
+    lesson show <id> / progress show          # live state moves per lesson
+```
+
+- Never issue parallel or backgrounded `lesson create` / `lesson execute` /
+  `quiz run` — no `&` job control, no batch fan-out, no concurrent shells.
+  Every invocation is foreground and sequential, matching how a real user
+  studies the material. (Corpus-level scaffolding — `course create`, `venv
+  create/add`, `plan create`/`confirm` — is likewise one command at a time.)
+- Notebook execution is serialized per course by design (adr/017). A strictly
+  sequential pass never contends, so under this pattern any wait, kernel-port
+  error, or `another notebook execution is in progress` StoreError is a
+  **bug** (leaked lock), not expected serialization.
+
+Then drive the full chain with the user's corpus (course → venv → lesson
+create per lesson → plan create → plan confirm → lesson execute → quiz run →
+progress summary — lessons must exist before `plan confirm` resolves links),
+and at **every** command probe the failure-hunting catalog below. Parse every
+envelope (`status`, `code`, `data`) and record observed vs documented.
 
 ### Dev-vs-release surface parity
 
@@ -198,8 +226,8 @@ the gap — record it as a doc-gap (Phase D), not a crash.
 
 | category | probes |
 |---|---|
-| error paths | malformed/missing spec field → `ValidationError`; duplicate create → `AlreadyExists`; destructive without `--force` → `Conflict`; execute before venv → `StoreError`; op on a nonexistent ID → `NotFound` |
-| edge cases | empty spec; wrong types; unicode/special-char slugs; huge/boundary values; duplicate IDs; out-of-order operations |
+| error paths | malformed/missing spec field → `ValidationError`; duplicate create → `AlreadyExists`; destructive without `--force` → `Conflict`; duplicate explicit lesson `order` → `Conflict`; execute before venv → `StoreError`; op on a nonexistent ID → `NotFound` |
+| edge cases | empty spec; wrong types; unicode/special-char slugs (non-kebab provided slug → `ValidationError`, adr/017); huge/boundary values; duplicate IDs; out-of-order operations |
 | chaining | every ID/state from command A resolves in command B; broken chains; the plan-confirm-needs-existing-lessons ordering trap |
 | idempotency | re-run create/update/sync → no corruption; `dev setup`/`clean` idempotent |
 | doc-vs-behavior | observed envelope matches the shape documented in `--help`/`howto`/the skill |
@@ -273,5 +301,7 @@ add, `#[test]`s to write, examples/scenarios to author).
 - Never write or edit outside `.sandbox/**` — prescribe doc gaps, don't author them.
 - Never call `rm`, `mkdir`, or `uv` directly — the CLI owns all of it.
 - Never build courses/lessons at the repo root — always under `.sandbox`.
+- Never run lessons concurrently — no backgrounded/parallel `lesson create` /
+  `lesson execute` / `quiz run` (a learner studies one lesson at a time).
 - Never proceed past the report without explicit human sign-off.
 - Never hand-edit `src/howto.gen.md` or `docs/specs/*` — they regenerate via xtask.

@@ -155,6 +155,28 @@ fn migrate(conn: &Connection) -> Result<(), CarpenterError> {
             .map_err(store_msg)?;
         }
     }
+    // ord uniqueness (adr/017): legacy DBs can hold duplicate ords (racy
+    // max(ord)+1 read-then-insert). Resequence densely (stable by
+    // ord, created_at, id), then enforce the invariant with a unique index so
+    // any future duplicate fails loudly instead of silently.
+    let dupes: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM (SELECT ord FROM lessons GROUP BY ord HAVING COUNT(*) > 1)",
+            [],
+            |r| r.get(0),
+        )
+        .map_err(store_msg)?;
+    if dupes > 0 {
+        conn.execute(
+            "WITH ranked AS \
+               (SELECT id, ROW_NUMBER() OVER (ORDER BY ord, created_at, id) AS rn FROM lessons) \
+             UPDATE lessons SET ord = (SELECT rn FROM ranked WHERE ranked.id = lessons.id)",
+            [],
+        )
+        .map_err(store_msg)?;
+    }
+    conn.execute_batch("CREATE UNIQUE INDEX IF NOT EXISTS idx_lessons_ord ON lessons(ord);")
+        .map_err(store_msg)?;
     Ok(())
 }
 
@@ -580,27 +602,20 @@ pub struct CaseDb {
     pub ord: i64,
 }
 
-/// Next lesson order (`max(ord)+1`, or 1).
-pub fn next_lesson_ord(conn: &Connection) -> Result<i64, CarpenterError> {
-    let max: Option<i64> = conn
-        .query_row("SELECT MAX(ord) FROM lessons", [], |r| r.get(0))
-        .optional()
-        .map_err(store_msg)?;
-    Ok(max.unwrap_or(0) + 1)
+/// Map a lessons-insert failure to [`CarpenterError::Conflict`] when it hits the
+/// `ord` uniqueness index, else a plain store error.
+fn lesson_insert_err(e: rusqlite::Error, ord: i64) -> CarpenterError {
+    if let rusqlite::Error::SqliteFailure(_, Some(msg)) = &e {
+        if msg.contains("lessons.ord") {
+            return CarpenterError::Conflict(format!("lesson ord {ord} already taken"));
+        }
+    }
+    store_msg(e)
 }
 
-/// Is a lesson slug already taken?
-pub fn lesson_slug_taken(conn: &Connection, slug: &str) -> Result<bool, CarpenterError> {
-    let id: Option<String> = conn
-        .query_row("SELECT id FROM lessons WHERE slug=?1", params![slug], |r| {
-            r.get(0)
-        })
-        .optional()
-        .map_err(store_msg)?;
-    Ok(id.is_some())
-}
-
-/// Insert a lessons row (status defaults to `not_started`, skip 0).
+/// Insert a lessons row with an explicit `ord` (status `not_started`, skip 0).
+///
+/// [`CarpenterError::Conflict`] if `ord` is already taken (adr/017).
 pub fn insert_lesson(
     conn: &Connection,
     id: &str,
@@ -615,8 +630,41 @@ pub fn insert_lesson(
          VALUES (?1,?2,?3,?4,'not_started',0,?5,?6)",
         params![id, slug, title, ord, created_at, updated_at],
     )
-    .map_err(store_msg)?;
+    .map_err(|e| lesson_insert_err(e, ord))?;
     Ok(())
+}
+
+/// Insert a lessons row with an atomically allocated `ord` and return it.
+///
+/// Allocation (`max(ord)+1`) happens inside the same statement as the insert,
+/// so concurrent creators cannot observe the same `max` snapshot (adr/017).
+pub fn insert_lesson_auto_ord(
+    conn: &Connection,
+    id: &str,
+    slug: &str,
+    title: &str,
+    created_at: &str,
+    updated_at: &str,
+) -> Result<i64, CarpenterError> {
+    conn.query_row(
+        "INSERT INTO lessons (id,slug,title,ord,status,skip,created_at,updated_at) \
+         VALUES (?1,?2,?3,(SELECT COALESCE(MAX(ord),0)+1 FROM lessons),'not_started',0,?4,?5) \
+         RETURNING ord",
+        params![id, slug, title, created_at, updated_at],
+        |r| r.get(0),
+    )
+    .map_err(|e| lesson_insert_err(e, 0))
+}
+
+/// Is a lesson slug already taken?
+pub fn lesson_slug_taken(conn: &Connection, slug: &str) -> Result<bool, CarpenterError> {
+    let id: Option<String> = conn
+        .query_row("SELECT id FROM lessons WHERE slug=?1", params![slug], |r| {
+            r.get(0)
+        })
+        .optional()
+        .map_err(store_msg)?;
+    Ok(id.is_some())
 }
 
 /// Read a lesson by id; [`CarpenterError::NotFound`] if absent.
