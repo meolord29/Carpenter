@@ -38,8 +38,9 @@ curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install
 ```
 
 The binary lands in `~/.local/bin` (add it to `PATH` if the installer says so).
-If `opencode` is on your machine, the installer also registers the carpenter
-skill into it; otherwise register manually:
+Update later with `carpenter upgrade` (fetches the latest build + refreshes the
+skill). If `opencode` is on your machine, the installer also registers the
+carpenter skill into it; otherwise register manually:
 
 ```sh
 carpenter register --app opencode

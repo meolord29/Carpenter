@@ -10,6 +10,7 @@ pub mod exec;
 pub mod helper;
 pub mod notebook;
 pub mod output;
+pub mod release;
 pub mod skill;
 pub mod status;
 pub mod store;

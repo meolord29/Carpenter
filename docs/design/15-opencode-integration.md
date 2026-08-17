@@ -64,13 +64,15 @@ envelopes. `link` (future CLI registry) is a separate concern — see
 [adr/006](../adr/006-skill-integration.md).
 
 ## `upgrade` auto-refreshes the skill
-After replacing the binary, `upgrade` checks for the registered skill by file
-presence (`~/.config/opencode/skills/carpenter/SKILL.md`) and, if present, re-renders
-it via the same `write_skill()` path `register` uses — embedding the **new** version
-+ bin path (so any skill-field change ships too). If absent, it warns (does not
-auto-register) with `reason:"not_registered"` (the exact warning string is
+After replacing the binary, `upgrade` updates the skill — how depends on the
+mode (adr/016): **source mode** (`--source` / config `source_dir`) refreshes
+only if the skill file is present (`~/.config/opencode/skills/carpenter/SKILL.md`),
+warns with `reason:"not_registered"` otherwise (the exact warning string is
 single-sourced in [specs/18-build-install-upgrade.md](../specs/18-build-install-upgrade.md);
-this doc does not duplicate it). Refresh is best-effort (a failure never rolls back
+this doc does not duplicate it); **release mode** (no flags — the default)
+re-registers unconditionally, mirroring `scripts/install.sh` (installer parity).
+Both re-render via the same `write_skill()` path `register` uses — embedding the
+**new** version + bin path. Refresh is best-effort (a failure never rolls back
 the binary upgrade). `--no-skill` skips it (`skill:null`).
 See [specs/18-build-install-upgrade.md](../specs/18-build-install-upgrade.md),
 [adr/004](../adr/004-build-install-split.md), [adr/009](../adr/009-skill-assembled-from-fields.md).

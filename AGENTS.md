@@ -116,6 +116,8 @@ Releases (`.github/workflows/release.yml`): every push to `main` rolls the
 `edge` prerelease — `x86_64-unknown-linux-musl` + `aarch64-apple-darwin`
 tarballs, `SHA256SUMS`, and `scripts/install.sh` (the `curl | sh` one-liner;
 auto-registers into opencode when detected; Intel Mac users build from source).
+`carpenter upgrade` (no flags) fetches that release — checksum-verified via the
+same pipeline — and re-registers the skill (adr/016).
 
 ## The ponytail ladder (apply before writing any code)
 Before writing code, stop at the first rung that holds:
