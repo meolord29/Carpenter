@@ -31,6 +31,24 @@ That's the whole loop. You never touch the CLI — the agent does.
 
 ## Install
 
+**Linux (x86_64) or macOS (Apple Silicon)** — one line:
+
+```sh
+curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh
+```
+
+The binary lands in `~/.local/bin` (add it to `PATH` if the installer says so).
+If `opencode` is on your machine, the installer also registers the carpenter
+skill into it; otherwise register manually:
+
+```sh
+carpenter register --app opencode
+```
+To verify integrity, the release also ships `SHA256SUMS` next to each tarball.
+
+**Any other platform** (incl. Intel Macs) — build from source.
+Needs [Rust](https://rustup.rs) and [`uv`](https://github.com/astral-sh/uv):
+
 ```sh
 git clone https://github.com/meolord29/Carpenter carpenter
 cd carpenter
@@ -38,8 +56,6 @@ cargo xtask build --release
 ./target/release/carpenter install
 carpenter register --app opencode
 ```
-
-Needs [Rust](https://rustup.rs) and [`uv`](https://github.com/astral-sh/uv).
 
 ## Learn more
 

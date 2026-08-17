@@ -83,6 +83,9 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace
 `[package]`), so bare `cargo test`/`clippy` skip the `xtask` crate and its
 stale-check tests. `cargo doc` rejects `-- -D warnings` in this toolchain, so
 the deny flag goes via `RUSTDOCFLAGS`.
+Pre-commit lint hook (per clone): `git config core.hooksPath .githooks` —
+`.githooks/pre-commit` runs `cargo fmt --all -- --check` when Rust files are
+staged (clippy/tests stay in CI). Guarded by `pre_commit_hook_is_present_and_executable`.
 `cargo build` is self-documenting by construction:
 - `#![deny(missing_docs)]` — every public item needs a `///` (clap reads it as `--help`).
 - `build.rs` (syn scan) — every command fn needs a worked-example file at
@@ -109,6 +112,10 @@ matrix — `rust-toolchain.toml` pins stable; `uv` is installed;
 `.gitattributes` (`eol=lf`) keeps the stale-checks green on Windows. See
 [design/17](docs/design/17-cross-platform.md),
 [adr/012](docs/adr/012-cross-platform-paths.md).
+Releases (`.github/workflows/release.yml`): every push to `main` rolls the
+`edge` prerelease — `x86_64-unknown-linux-musl` + `aarch64-apple-darwin`
+tarballs, `SHA256SUMS`, and `scripts/install.sh` (the `curl | sh` one-liner;
+auto-registers into opencode when detected; Intel Mac users build from source).
 
 ## The ponytail ladder (apply before writing any code)
 Before writing code, stop at the first rung that holds:
