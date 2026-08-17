@@ -7,7 +7,7 @@ Global scope only.
 <!-- BEGIN GENERATED -->
 | cmd | input | `data` (ok) |
 |-----|-------|-------------|
-| `register [--app opencode]` | --app (default `opencode`) | `{"app":"opencode","path":"~/.config/opencode/skills/carpenter/SKILL.md","version":"0.6.0","installed":true}` — writes `SKILL.md` + merges `"skill":{"carpenter":"allow"}`; `claude-code`/`agents` ⇒ `ValidationError` |
+| `register [--app opencode]` | --app (default `opencode`) | `{"app":"opencode","path":"~/.config/opencode/skills/carpenter/SKILL.md","version":"0.7.0","installed":true}` — writes `SKILL.md` + merges `"skill":{"carpenter":"allow"}`; `claude-code`/`agents` ⇒ `ValidationError` |
 | `register --print-skill` | --app | `{"skill":"…"}` — prints the rendered `SKILL.md` bytes; no filesystem change |
 | `deregister [--app opencode]` | --app (default `opencode`) | `{"app":"opencode","path":"~/.config/opencode/skills/carpenter/SKILL.md","removed":true}` — removes `SKILL.md` (+ dir if empty) + the `carpenter` allow key; `NotFound` if absent |
 <!-- END GENERATED -->

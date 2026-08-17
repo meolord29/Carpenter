@@ -1289,7 +1289,7 @@ carpenter register --app opencode
 
 Result (one envelope on stdout):
 ```json
-{"status":"ok","message":"skill registered: opencode","data":{"app":"opencode","path":"/…/opencode/skills/carpenter/SKILL.md","version":"0.6.0","installed":true}}
+{"status":"ok","message":"skill registered: opencode","data":{"app":"opencode","path":"/…/opencode/skills/carpenter/SKILL.md","version":"0.7.0","installed":true}}
 ```
 
 Writes `SKILL.md` + merges the `permission.skill.carpenter="allow"` entry. `--print-skill` prints the rendered bytes instead (no FS change).
@@ -1367,7 +1367,7 @@ carpenter upgrade --source /src/carpenter --bin-dir ~/.local/bin
 
 Result (one envelope on stdout):
 ```json
-{"status":"ok","message":"upgraded: 0.6.0","data":{"upgraded":true,"version":"0.6.0","bin":"/home/u/.local/bin/carpenter","source":"/src/carpenter","skill":{"refreshed":true,"app":"opencode","path":"/home/u/.config/opencode/skills/carpenter/SKILL.md"}}}
+{"status":"ok","message":"upgraded: 0.7.0","data":{"upgraded":true,"version":"0.7.0","bin":"/home/u/.local/bin/carpenter","source":"/src/carpenter","skill":{"refreshed":true,"app":"opencode","path":"/home/u/.config/opencode/skills/carpenter/SKILL.md"}}}
 ```
 
 Rebuilds from source, replaces the binary, and re-renders the registered skill. `--no-skill` skips the skill refresh (`skill:null`).
@@ -1392,7 +1392,7 @@ carpenter link register
 
 Result (one envelope on stdout):
 ```json
-{"status":"ok","message":"link manifest emitted","data":{"name":"carpenter","version":"0.6.0","bin":"/…/carpenter","summary":"Agent-driven CLI that builds Python/Jupyter learning material.","howto_excerpt":"Run `carpenter howto` for the full, always-current command manual.","commands":["course","lesson","plan","quiz","howto"]}}
+{"status":"ok","message":"link manifest emitted","data":{"name":"carpenter","version":"0.7.0","bin":"/…/carpenter","summary":"Agent-driven CLI that builds Python/Jupyter learning material.","howto_excerpt":"Run `carpenter howto` for the full, always-current command manual.","commands":["course","lesson","plan","quiz","howto"]}}
 ```
 
 Future CLI registry manifest. Read-only emit.
