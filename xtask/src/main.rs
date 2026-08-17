@@ -1,6 +1,7 @@
 //! Workspace automation tasks, invoked via `cargo xtask <task>`.
 
 mod build;
+mod hooks;
 mod howto;
 mod paths;
 mod specs;

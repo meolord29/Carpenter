@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Pre-commit lint gate: cargo fmt on staged Rust changes.
+# Enable after clone: git config core.hooksPath .githooks
+
+set -euo pipefail
+
+# Index column (X of `XY path`): A/M/R/C = staged; covers intent-to-add too.
+if ! git status --porcelain | grep -Eq '^[AMRC].*\.rs$'; then
+    exit 0
+fi
+
+if ! cargo fmt --all -- --check; then
+    echo "carpenter: cargo fmt --check failed — run 'cargo fmt --all', re-stage, and retry." >&2
+    exit 1
+fi
