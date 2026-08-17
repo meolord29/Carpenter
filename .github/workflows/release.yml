@@ -1,0 +1,72 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-edge
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - os: macos-14
+            target: aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: install musl-tools
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - name: build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: package
+        run: |
+          strip target/${{ matrix.target }}/release/carpenter
+          tar -czf carpenter-${{ matrix.target }}.tar.gz -C target/${{ matrix.target }}/release carpenter
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: carpenter-${{ matrix.target }}
+          path: carpenter-${{ matrix.target }}.tar.gz
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: checksums
+        run: cd dist && sha256sum carpenter-*.tar.gz > SHA256SUMS
+      - name: roll edge release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete edge --cleanup-tag --yes || true
+          gh release create edge dist/carpenter-*.tar.gz dist/SHA256SUMS scripts/install.sh \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "carpenter edge (${GITHUB_SHA::7})" \
+            --notes "Rolling build from main.
+
+          Install (Linux x86_64, macOS Apple Silicon):
+
+              curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh"

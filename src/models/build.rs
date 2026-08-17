@@ -36,13 +36,13 @@ pub mod examples {
             ),
             (
                 "upgrade [--source <p>] [--bin-dir <p>] [--no-skill]",
-                "source dir (`--source` → config `source_dir` → error)",
-                "`skill` outcomes: `{refreshed:true,…}` · `{refreshed:false,reason:\"not_registered\",warning:\"…\"}` · `--no-skill` ⇒ `skill:null`",
+                "no flag → GitHub `edge` release; `--source` → config `source_dir` → local build",
+                "`skill` outcomes: `{refreshed:true,…}` · `{refreshed:false,reason:\"not_registered\",warning:\"…\"}` (source mode) · `--no-skill` ⇒ `skill:null`",
                 Data::Upgrade {
                     upgraded: true,
                     version: env!("CARGO_PKG_VERSION").into(),
                     bin: String::from("~/.local/bin/carpenter"),
-                    source: String::from("/src/carpenter"),
+                    source: String::from("https://github.com/meolord29/Carpenter/releases/download/edge/carpenter-x86_64-unknown-linux-musl.tar.gz"),
                     skill: Some(json!({"refreshed": true, "app": "opencode", "path": "~/.config/opencode/skills/carpenter/SKILL.md"})),
                 },
             ),

@@ -570,7 +570,7 @@ pub enum Data {
         version: String,
         /// upgraded binary path.
         bin: String,
-        /// source directory rebuilt.
+        /// upgrade origin: source dir rebuilt or release tarball URL.
         source: String,
         /// skill refresh outcome (`null` with `--no-skill`).
         skill: Option<serde_json::Value>,

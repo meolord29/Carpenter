@@ -1,10 +1,10 @@
-//! `upgrade` — rebuild carpenter from a source checkout and atomically replace
-//! the installed binary; best-effort refreshes the registered skill.
+//! `upgrade` — replace the installed carpenter binary, then update the skill.
 //!
-//! Source resolves `--source` → `config.source_dir` → `ValidationError`. Runs
-//! `cargo xtask build --release` from source (regenerating `howto` + specs), then
-//! writes the binary via tmp+rename. Skill refresh: `refreshed` if registered,
-//! `not_registered` (warning) if absent, `null` with `--no-skill`.
+//! Two modes (adr/018): **release** (default — fetch the GitHub `edge` tarball,
+//! verify its checksum, extract, probe, atomically replace; always (re-)registers
+//! the skill, mirroring `scripts/install.sh`) and **source** (`--source` or
+//! config `source_dir` — rebuild via `cargo xtask build --release`, best-effort
+//! skill refresh). `--bin-dir`/`--no-skill` apply to both.
 
 use std::path::{Path, PathBuf};
 
@@ -13,6 +13,7 @@ use serde_json::{json, Value};
 use crate::core::config;
 use crate::core::error::CarpenterError;
 use crate::core::exec;
+use crate::core::release::{self, Staged};
 use crate::core::skill::{self, App};
 use crate::core::store::{self, Paths};
 use crate::models::Data;
@@ -32,23 +33,27 @@ pub fn upgrade(
         .config_file()
         .map(|p| config::load_from(&p))
         .unwrap_or_default();
-    let source_dir = resolve_source(source, &cfg)?;
-    if !source_dir.is_dir() {
-        return Err(CarpenterError::ValidationError(format!(
-            "source dir does not exist: {}",
-            source_dir.display()
-        )));
-    }
-    // gen-howto + gen-specs + release build (the embedded howto regenerates)
-    exec::run_cargo_or_store(&["xtask", "build", "--release"], &source_dir)?;
-    let built = source_dir.join("target/release/carpenter");
-    if !built.exists() {
-        return Err(CarpenterError::StoreError(format!(
-            "build finished but binary not found at {}",
-            built.display()
-        )));
-    }
-    let version = version_of(&built)?;
+    // `_stage` keeps the download dir alive until the binary is copied out.
+    let (version, origin, built, _stage) = match resolve_mode(source, &cfg)? {
+        Mode::Release => {
+            let staged = upgrade_from_release()?;
+            (
+                release::probe_version(&staged.bin)?,
+                staged.url.clone(),
+                staged.bin.clone(),
+                Some(staged),
+            )
+        }
+        Mode::Source(dir) => {
+            let built = build_from_source(&dir)?;
+            (
+                release::probe_version(&built)?,
+                dir.display().to_string(),
+                built,
+                None,
+            )
+        }
+    };
     let target_dir = bin_dir.map(PathBuf::from).unwrap_or(cfg.bin_dir);
     std::fs::create_dir_all(&target_dir).map_err(store::io_to_store)?;
     let dest = target_dir.join("carpenter");
@@ -58,56 +63,84 @@ pub fn upgrade(
     let skill_outcome = if no_skill {
         None
     } else {
-        Some(refresh_skill(paths))
+        Some(skill_outcome_for(source.is_some(), paths))
     };
     Ok(Data::Upgrade {
         upgraded: true,
         version,
         bin: dest.display().to_string(),
-        source: source_dir.display().to_string(),
+        source: origin,
         skill: skill_outcome,
     })
 }
 
-fn resolve_source(source: Option<&str>, cfg: &config::Config) -> Result<PathBuf, CarpenterError> {
+/// Where this upgrade comes from: the published release or a source checkout.
+enum Mode {
+    /// GitHub `edge` tarball.
+    Release,
+    /// Local source dir to rebuild.
+    Source(PathBuf),
+}
+
+fn resolve_mode(source: Option<&str>, cfg: &config::Config) -> Result<Mode, CarpenterError> {
     if let Some(s) = source.map(PathBuf::from) {
-        return Ok(s);
+        return Ok(Mode::Source(s));
     }
     if let Some(s) = cfg.source_dir.clone() {
-        return Ok(s);
+        return Ok(Mode::Source(s));
     }
-    Err(CarpenterError::ValidationError(
-        "no source dir: pass --source <path> or set `config source_dir` \
-         (clone carpenter and run from there)"
-            .into(),
-    ))
+    Ok(Mode::Release)
 }
 
-/// Read the version string from a freshly built binary (`<bin> --version`).
-fn version_of(bin: &Path) -> Result<String, CarpenterError> {
-    let out = std::process::Command::new(bin)
-        .arg("--version")
-        .output()
-        .map_err(|e| CarpenterError::StoreError(format!("failed to run new binary: {e}")))?;
-    let text = String::from_utf8_lossy(&out.stdout);
-    text.split_whitespace()
-        .nth(1)
-        .map(String::from)
-        .ok_or_else(|| CarpenterError::StoreError(format!("could not parse version from {text:?}")))
+/// Download + verify + extract the release for this platform into a temp stage
+/// dir (removed on drop — adr/018).
+fn upgrade_from_release() -> Result<Staged, CarpenterError> {
+    let target = release::platform_target().ok_or_else(|| {
+        CarpenterError::ValidationError(format!(
+            "no release asset for {} {} — build from source with `--source <path>` \
+             (published: Linux x86_64, macOS Apple Silicon)",
+            std::env::consts::OS,
+            std::env::consts::ARCH
+        ))
+    })?;
+    let tmp = release::stage_dir()?;
+    release::fetch_release(&release::download_base(), target, &tmp)
 }
 
-/// Best-effort skill refresh outcome. Never errors (a refresh failure does not
-/// roll back a successful binary upgrade).
-fn refresh_skill(paths: &Paths) -> Value {
+/// Run `cargo xtask build --release` in `dir`; return the built binary's path.
+fn build_from_source(source_dir: &Path) -> Result<PathBuf, CarpenterError> {
+    if !source_dir.is_dir() {
+        return Err(CarpenterError::ValidationError(format!(
+            "source dir does not exist: {}",
+            source_dir.display()
+        )));
+    }
+    // gen-howto + gen-specs + release build (the embedded howto regenerates)
+    exec::run_cargo_or_store(&["xtask", "build", "--release"], source_dir)?;
+    let built = source_dir.join("target/release/carpenter");
+    if !built.exists() {
+        return Err(CarpenterError::StoreError(format!(
+            "build finished but binary not found at {}",
+            built.display()
+        )));
+    }
+    Ok(built)
+}
+
+/// Release mode always (re-)registers (installer parity); source mode refreshes
+/// only when already registered. Best-effort: never fails the upgrade.
+fn skill_outcome_for(source_mode: bool, paths: &Paths) -> Value {
     let root = match paths.xdg_root() {
         Ok(r) => r,
         Err(e) => {
             return json!({"refreshed": false, "reason": "no_xdg_root", "error": e.to_string()})
         }
     };
-    let skill_path = App::Opencode.skill_path(root);
-    if !skill_path.exists() {
-        return json!({"refreshed": false, "reason": "not_registered", "warning": NOT_REGISTERED_WARNING});
+    if source_mode {
+        let skill_path = App::Opencode.skill_path(root);
+        if !skill_path.exists() {
+            return json!({"refreshed": false, "reason": "not_registered", "warning": NOT_REGISTERED_WARNING});
+        }
     }
     match skill::register(App::Opencode, root) {
         Ok(r) => json!({"refreshed": true, "app": r.app, "path": r.path}),
@@ -119,14 +152,6 @@ fn refresh_skill(paths: &Paths) -> Value {
 mod tests {
     use super::*;
     use crate::commands::testutil;
-
-    #[test]
-    fn upgrade_errors_without_source() {
-        let paths = testutil::meta_setup();
-        let err = upgrade(&paths, None, None, true).unwrap_err();
-        assert!(matches!(err, CarpenterError::ValidationError(_)));
-        let _ = std::fs::remove_dir_all(&paths.root);
-    }
 
     #[test]
     fn upgrade_errors_when_source_dir_missing() {
@@ -144,6 +169,27 @@ mod tests {
         crate::commands::config::set(&paths, "source_dir", "/definitely/not/here").unwrap();
         let err = upgrade(&paths, None, None, true).unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
+        let _ = std::fs::remove_dir_all(&paths.root);
+    }
+
+    #[test]
+    fn upgrade_release_mode_fails_cleanly_when_unreachable() {
+        // unsupported platforms never reach the download (see target_for tests)
+        if release::platform_target().is_none() {
+            return;
+        }
+        let paths = testutil::meta_setup();
+        // no --source, no config → release mode; point at an empty base dir.
+        // (The only unit test that may touch CARPENTER_DOWNLOAD_BASE.)
+        let empty = paths.root.join("empty-release");
+        std::fs::create_dir_all(&empty).unwrap();
+        std::env::set_var(
+            "CARPENTER_DOWNLOAD_BASE",
+            format!("file://{}", empty.display()),
+        );
+        let err = upgrade(&paths, None, None, true).unwrap_err();
+        std::env::remove_var("CARPENTER_DOWNLOAD_BASE");
+        assert!(matches!(err, CarpenterError::StoreError(_)), "{err}");
         let _ = std::fs::remove_dir_all(&paths.root);
     }
 
