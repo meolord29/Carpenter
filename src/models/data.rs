@@ -575,6 +575,18 @@ pub enum Data {
         /// skill refresh outcome (`null` with `--no-skill`).
         skill: Option<serde_json::Value>,
     },
+    /// `uninstall`.
+    Uninstall {
+        /// always true.
+        uninstalled: bool,
+        /// removed binary path (`null` if it was not present).
+        bin: Option<String>,
+        /// skill removal outcome: `{removed:true,app,path}` or
+        /// `{removed:false,reason:"not_registered"}`.
+        skill: serde_json::Value,
+        /// whether the config file was removed (`--purge-config`).
+        config_purged: bool,
+    },
     // ---- link ----
     /// `link register`.
     LinkRegister {
@@ -692,6 +704,10 @@ impl Data {
             Self::Build { slug, .. } => format!("course built: {slug}"),
             Self::Install { bin, .. } => format!("installed: {bin}"),
             Self::Upgrade { version, .. } => format!("upgraded: {version}"),
+            Self::Uninstall { bin, .. } => match bin {
+                Some(b) => format!("uninstalled: {b}"),
+                None => String::from("uninstalled"),
+            },
             Self::LinkRegister { .. } => String::from("link manifest emitted"),
             #[cfg(feature = "dev")]
             Self::DevCheck { .. } => String::from("dev prerequisites checked"),

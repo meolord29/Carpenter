@@ -3,71 +3,31 @@
 //! real test binary, then `upgrade` must download-verify-extract-probe-replace
 //! and re-register the skill.
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
+mod common;
+
+use std::path::Path;
 
 use carpenter::commands::upgrade::upgrade;
-use carpenter::core::release::{self, checksum_tool_for};
 use carpenter::core::store::Paths;
 use carpenter::models::Data;
 
-fn unique(tag: &str) -> PathBuf {
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    std::env::temp_dir().join(format!("carpenter-it-{tag}-{}-{nanos}", std::process::id()))
-}
-
-/// Build a release-layout fixture (tarball + correct SHA256SUMS) from the real
-/// carpenter test binary; returns its dir.
-fn fixture(target: &str) -> PathBuf {
-    let dir = unique("rel");
-    std::fs::create_dir_all(&dir).unwrap();
-    std::fs::copy(env!("CARGO_BIN_EXE_carpenter"), dir.join("carpenter")).unwrap();
-    let tarball = format!("carpenter-{target}.tar.gz");
-    let status = Command::new("tar")
-        .args(["-czf"])
-        .arg(dir.join(&tarball))
-        .arg("-C")
-        .arg(&dir)
-        .arg("carpenter")
-        .status()
-        .unwrap();
-    assert!(status.success());
-    std::fs::remove_file(dir.join("carpenter")).unwrap();
-    let (tool, args) = checksum_tool_for(std::env::consts::OS).unwrap();
-    let out = Command::new(tool)
-        .args(args)
-        .arg(dir.join(&tarball))
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    let hash = String::from_utf8_lossy(&out.stdout);
-    let hash = hash.split_whitespace().next().unwrap();
-    std::fs::write(dir.join("SHA256SUMS"), format!("{hash}  {tarball}\n")).unwrap();
-    dir
-}
-
-fn paths() -> Paths {
-    let root = unique("root");
-    Paths {
-        config_dir: Some(root.join("xdg").join("carpenter")),
-        root,
-    }
-}
+use common::{release_fixture, unique};
 
 #[test]
 fn upgrade_release_mode_installs_and_registers() {
-    let Some(target) = release::platform_target() else {
+    let Some(target) = common::platform_target() else {
         return; // no published asset on this platform (mapping covered in unit tests)
     };
-    let dir = fixture(target);
+    let dir = release_fixture(target);
     std::env::set_var(
         "CARPENTER_DOWNLOAD_BASE",
         format!("file://{}", dir.display()),
     );
-    let paths = paths();
+    let root = unique("root");
+    let paths = Paths {
+        config_dir: Some(root.join("xdg").join("carpenter")),
+        root,
+    };
     let bin_dir = paths.root.join("bin");
 
     let Data::Upgrade {

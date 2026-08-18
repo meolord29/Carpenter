@@ -21,6 +21,7 @@ pub mod progress;
 pub mod quiz;
 pub mod register;
 pub mod skip;
+pub mod uninstall;
 pub mod upgrade;
 pub mod venv;
 

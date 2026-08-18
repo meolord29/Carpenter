@@ -1,4 +1,5 @@
-//! Output examples for `build`/`install`/`upgrade` (docs/specs/18-build-install-upgrade.md).
+//! Output examples for `build`/`install`/`upgrade`/`uninstall`
+//! (docs/specs/18-build-install-upgrade.md).
 
 use serde_json::json;
 
@@ -44,6 +45,17 @@ pub mod examples {
                     bin: String::from("~/.local/bin/carpenter"),
                     source: String::from("https://github.com/meolord29/Carpenter/releases/download/edge/carpenter-x86_64-unknown-linux-musl.tar.gz"),
                     skill: Some(json!({"refreshed": true, "app": "opencode", "path": "~/.config/opencode/skills/carpenter/SKILL.md"})),
+                },
+            ),
+            (
+                "uninstall [--bin-dir <p>] [--purge-config]",
+                "—",
+                "`skill` outcomes: `{removed:true,app,path}` · `{removed:false,reason:\"not_registered\"}`; `bin:null` when no binary was present; `NotFound` when neither skill nor binary exists",
+                Data::Uninstall {
+                    uninstalled: true,
+                    bin: Some(String::from("~/.local/bin/carpenter")),
+                    skill: json!({"removed": true, "app": "opencode", "path": "~/.config/opencode/skills/carpenter/SKILL.md"}),
+                    config_purged: false,
                 },
             ),
         ]
