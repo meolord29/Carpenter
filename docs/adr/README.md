@@ -22,3 +22,4 @@ sequence are retired decisions (not listed). Read topically; start with the inde
 | 016 | [016-dev-feature.md](016-dev-feature.md) | `dev` build stage (relaxed gates) + `--capture-example` authoring loop |
 | 017 | [017-concurrency-ords-slugs-exec.md](017-concurrency-ords-slugs-exec.md) | concurrency semantics: atomic+unique lesson ords, slug validation, per-course execution lock |
 | 018 | [018-upgrade-fetches-release.md](018-upgrade-fetches-release.md) | `upgrade` defaults to fetching the published `edge` release (checksum-verified) |
+| 019 | [019-uninstall-semantics.md](019-uninstall-semantics.md) | `uninstall`: best-effort skill removal, self-delete binary, keep config unless `--purge-config` |

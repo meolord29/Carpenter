@@ -87,6 +87,22 @@ pub fn cli() -> Command {
                 ),
         )
         .subcommand(
+            Command::new("uninstall")
+                .about("Remove the carpenter skill, the installed binary, and (with --purge-config) the config.")
+                .arg(
+                    Arg::new("bin-dir")
+                        .long("bin-dir")
+                        .value_name("PATH")
+                        .help("Bin dir (default: config bin_dir → ~/.local/bin)."),
+                )
+                .arg(
+                    Arg::new("purge-config")
+                        .long("purge-config")
+                        .action(ArgAction::SetTrue)
+                        .help("Also remove the carpenter config file."),
+                ),
+        )
+        .subcommand(
             Command::new("link")
                 .about("Link manifest commands (future CLI registry).")
                 .subcommand(Command::new("register").about("Emit the carpenter link manifest.")),
@@ -673,6 +689,10 @@ fn dispatch(paths: &Paths, matches: &ArgMatches) -> Result<Data, core::error::Ca
             let source = m.get_one::<String>("source").map(|s| s.as_str());
             let bin_dir = m.get_one::<String>("bin-dir").map(|s| s.as_str());
             commands::upgrade::upgrade(paths, source, bin_dir, m.get_flag("no-skill"))
+        }
+        Some(("uninstall", m)) => {
+            let bin_dir = m.get_one::<String>("bin-dir").map(|s| s.as_str());
+            commands::uninstall::uninstall(paths, bin_dir, m.get_flag("purge-config"))
         }
         Some(("link", sub)) => link_cmd(paths, sub),
         #[cfg(feature = "dev")]
