@@ -29,10 +29,11 @@ Gates: `rustfmt`, `clippy -D warnings`, `cargo doc --no-deps -- -D warnings`.
 
 ## CI
 `.github/workflows/ci.yml` runs the full gate suite (the commands above) on a matrix of
-`ubuntu`/`macos`/`windows` ([design/17](17-cross-platform.md),
+`ubuntu-latest`/`macos-14` ([design/17](17-cross-platform.md),
 [adr/012](../adr/012-cross-platform-paths.md)). Preconditions: `rust-toolchain.toml`
-pins stable + `clippy`/`rustfmt`; `uv` is installed (`astral-sh/setup-uv`) so
-`uv_is_available_in_this_env` passes; `.gitattributes` (`eol=lf`) keeps the byte-equality
-stale-checks green on a Windows checkout (no `autocrlf` LF→CRLF flip). The two `python3`
-probes (compare parity, helper validity) `return` on spawn failure and no-op, not fail,
-where `python3` is absent.
+pins stable; `uv` is installed (`astral-sh/setup-uv`) so
+`uv_is_available_in_this_env` passes. The two `python3` probes (compare parity,
+helper validity) `return` on spawn failure and no-op, not fail, where `python3`
+is absent. `release.yml` additionally smoke-tests the published `edge` artifact
+via the real `curl | sh` one-liner on both lanes (black-box: version, howto,
+register, uninstall).

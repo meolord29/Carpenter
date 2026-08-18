@@ -107,17 +107,29 @@ Rationale: [adr/007](docs/adr/007-compile-enforced-command-docs.md),
 [adr/008](docs/adr/008-specs-generated-from-types.md),
 [adr/009](docs/adr/009-skill-assembled-from-fields.md).
 
-CI (`.github/workflows/ci.yml`) mirrors these gates on an `ubuntu`/`macos`/`windows`
-matrix — `rust-toolchain.toml` pins stable; `uv` is installed;
-`.gitattributes` (`eol=lf`) keeps the stale-checks green on Windows. See
+CI (`.github/workflows/ci.yml`) mirrors these gates on an
+`ubuntu-latest`/`macos-14` matrix (the two supported OSes —
 [design/17](docs/design/17-cross-platform.md),
-[adr/012](docs/adr/012-cross-platform-paths.md).
-Releases (`.github/workflows/release.yml`): every push to `main` rolls the
-`edge` prerelease — `x86_64-unknown-linux-musl` + `aarch64-apple-darwin`
-tarballs, `SHA256SUMS`, and `scripts/install.sh` (the `curl | sh` one-liner;
-auto-registers into opencode when detected; Intel Mac users build from source).
-`carpenter upgrade` (no flags) fetches that release — checksum-verified via the
-same pipeline — and re-registers the skill (adr/018).
+[adr/012](docs/adr/012-cross-platform-paths.md)) — `rust-toolchain.toml`
+pins stable and `uv` is installed. Releases (`.github/workflows/release.yml`):
+every push to `main` rolls the `edge` prerelease — `x86_64-unknown-linux-musl`
++ `aarch64-apple-darwin` tarballs, `SHA256SUMS`, and `scripts/install.sh` (the
+`curl | sh` one-liner; auto-registers into opencode when detected; Intel Mac
+users build from source) — then a post-publish **smoke job** verifies the
+published artifact through the real one-liner (version, howto, register,
+uninstall) on both lanes. `carpenter upgrade` (no flags) fetches that release —
+checksum-verified via the same pipeline — and re-registers the skill (adr/018).
+
+## Trunk-based development
+`main` is the trunk: always green, always shippable (every merge rolls `edge`).
+- **Short-lived branches only**: `ivan/<topic>`, target ≤1 day of work, one
+  concern per branch. No long-lived branches — unfinished work lands dark
+  behind the `dev` feature flag (adr/016) instead of aging on a branch.
+- **Merge green or don't merge**: ci.yml must pass on the branch head; rebase
+  onto `main` before merging if it has moved. Delete the branch after merge.
+- **Branch protection** on `main` enforces the checks; admins follow the same
+  rule (direct pushes reserved for generated-surface fixes like
+  `howto.gen.md`/spec-table drift).
 
 ## Dev authoring loop (`--dev`)
 Two build stages ([design/19](docs/design/19-dev-build.md),
@@ -173,10 +185,11 @@ golfed.
 - **Runtime:** learner Python runs in the course venv (`uv run`); `lesson execute`
   and `quiz run` require `carpenter venv create` first (else `StoreError`).
   `helper.py` is stdlib-only (no venv needed). See `docs/design/16-execution.md`.
-- **Paths:** per-OS — `config_dir` via `dirs` (`~/.config` Linux, `~/Library/…` macOS,
-  `%APPDATA%` Windows); `bin_dir` default + binary name via `core/platform.rs`
-  (`#[cfg(target_os)]`). One platform module; no scattered `#[cfg]`. See
-  `docs/design/17-cross-platform.md`, `docs/adr/012-cross-platform-paths.md`.
+- **Paths:** per-OS — `config_dir` via `dirs` (`~/.config` Linux, `~/Library/…`
+  macOS); `bin_dir` default `~/.local/bin` from `dirs::home_dir()`. `dirs` is
+  the only platform surface — zero `#[cfg]` in the codebase (Linux/macOS only;
+  Windows unsupported). See `docs/design/17-cross-platform.md`,
+  `docs/adr/012-cross-platform-paths.md`.
 - **IDs:** stable strings (`s1`, `p1`, `q1`, …), not SQLite rowids. See
   `docs/data-model/`.
 - **Errors:** never raise to the caller — always an error envelope. List/show

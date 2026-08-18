@@ -195,7 +195,7 @@ pub fn is_on_path(dir: &Path) -> bool {
     };
     let target = dir.canonicalize().unwrap_or_else(|_| dir.to_path_buf());
     path_var
-        .split(if cfg!(windows) { ';' } else { ':' })
+        .split(':')
         .filter(|s| !s.is_empty())
         .map(std::path::PathBuf::from)
         .any(|p| p.canonicalize().ok().as_deref() == Some(&target))

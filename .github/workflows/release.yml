@@ -70,3 +70,43 @@ jobs:
           Install (Linux x86_64, macOS Apple Silicon):
 
               curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh"
+
+  # Post-publish smoke (adr/019 testing tier): verify the PUBLISHED edge
+  # artifact via the literal user one-liner on a clean runner — proves the
+  # tarball/checksum/installer pipeline, not just the repo tests (which run
+  # against a local file:// fixture).
+  smoke:
+    name: smoke (${{ matrix.os }})
+    needs: release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    env:
+      CARPENTER_INSTALL_DIR: ${{ github.workspace }}/carpenter-bin
+    steps:
+      - name: fake opencode on PATH (deterministic auto-register branch)
+        run: |
+          mkdir -p "$HOME/stub" && printf '#!/bin/sh\nexit 0\n' > "$HOME/stub/opencode" \
+            && chmod +x "$HOME/stub/opencode"
+          echo "$HOME/stub" >> "$GITHUB_PATH"
+      - name: install via the real user one-liner
+        run: |
+          curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh
+      - name: assert shipped surface
+        run: |
+          set -eu
+          BIN="$CARPENTER_INSTALL_DIR/carpenter"
+          test -x "$BIN"
+          "$BIN" --version
+          "$BIN" howto > howto.md && test -s howto.md
+          "$BIN" register --app opencode | grep '"status":"ok"'
+          test -f "$HOME/.config/opencode/skills/carpenter/SKILL.md" \
+            || test -f "$HOME/Library/Application Support/opencode/skills/carpenter/SKILL.md"
+      - name: uninstall reverses the footprint
+        run: |
+          set -eu
+          BIN="$CARPENTER_INSTALL_DIR/carpenter"
+          "$BIN" uninstall --bin-dir "$CARPENTER_INSTALL_DIR" | grep '"status":"ok"'
+          test ! -e "$BIN"
