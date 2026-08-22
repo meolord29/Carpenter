@@ -101,6 +101,7 @@ jobs:
         if: matrix.opencode_install == 'script'
         run: |
           curl -fsSL https://opencode.ai/install | bash -s -- --no-modify-path
+          export PATH="$HOME/.opencode/bin:$PATH"
           command -v opencode
           opencode --version
       - name: install opencode (brew)
