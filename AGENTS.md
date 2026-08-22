@@ -115,14 +115,16 @@ pins stable and `uv` is installed. Releases (`.github/workflows/release.yml`):
 every push to `main` rolls the `edge` prerelease — `x86_64-unknown-linux-musl`
 + `aarch64-apple-darwin` tarballs, `SHA256SUMS`, and `scripts/install.sh` (the
 `curl | sh` one-liner; auto-registers into opencode when detected; Intel Mac
-users build from source) — then a post-publish **smoke job** verifies the
-published artifact through the real one-liner (version, howto, register,
-uninstall) against a **real opencode** (curl installer on Linux; curl + brew
-lanes on macOS), plus a never-failing path-report diagnostic capturing which
-skill path each side chose (evidence for the macOS skill-path mismatch;
-assertions stay dual-path until triaged). `carpenter upgrade` (no flags)
-fetches that release — checksum-verified via the same pipeline — and
-re-registers the skill (adr/018).
+users build from source) — then a **smoke job** verifies the artifact through
+the real one-liner (version, howto, register, uninstall) against a **real
+opencode** (curl installer on Linux; curl + brew lanes on macOS), plus a
+never-failing path-report diagnostic capturing which skill path each side chose
+(evidence for the macOS skill-path mismatch; assertions stay dual-path until
+triaged). The same smoke lanes run **pre-merge on PRs** against PR-built
+artifacts (`CARPENTER_DOWNLOAD_BASE=file://`), and the release job is
+push-only — so a PR can never publish `edge` nor merge with red smoke.
+`carpenter upgrade` (no flags) fetches that release — checksum-verified via
+the same pipeline — and re-registers the skill (adr/018).
 
 ## Trunk-based development
 `main` is the trunk: always green, always shippable (every merge rolls `edge`).
@@ -131,9 +133,11 @@ re-registers the skill (adr/018).
   behind the `dev` feature flag (adr/016) instead of aging on a branch.
 - **Merge green or don't merge**: ci.yml must pass on the branch head; rebase
   onto `main` before merging if it has moved. Delete the branch after merge.
-- **Branch protection** on `main` enforces the checks; admins follow the same
-  rule (direct pushes reserved for generated-surface fixes like
-  `howto.gen.md`/spec-table drift).
+- **Branch protection** on `main` enforces the checks — gates, build, and the
+  smoke lanes — for everyone including the owner; approvals can't be bypassed
+  silently (the owner bypasses the review rule only, never the checks; direct
+  pushes reserved for generated-surface fixes like `howto.gen.md`/spec-table
+  drift).
 
 ## Dev authoring loop (`--dev`)
 Two build stages ([design/19](docs/design/19-dev-build.md),

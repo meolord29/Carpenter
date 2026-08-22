@@ -3,13 +3,15 @@ name: release
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-edge
+  group: release-edge-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -44,8 +46,11 @@ jobs:
           path: carpenter-${{ matrix.target }}.tar.gz
           if-no-files-found: error
 
+  # Publish only from main (never from a PR); smoke still runs on PRs
+  # against PR-built artifacts.
   release:
     needs: build
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,17 +76,25 @@ jobs:
 
               curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh"
 
-  # Post-publish smoke (adr/019 testing tier): verify the PUBLISHED edge
-  # artifact via the literal user one-liner on a clean runner — proves the
-  # tarball/checksum/installer pipeline, not just the repo tests (which run
-  # against a local file:// fixture). A REAL opencode is installed first
-  # (curl installer on Linux, curl + brew lanes on macOS) so install.sh's
-  # auto-register branch runs against the real agent app. The diagnostic
-  # step reports which path each side chose (evidence for the macOS
-  # skill-path mismatch); assertions stay dual-path until triaged.
+  # Smoke (adr/019 testing tier): verify the release artifact via the real
+  # installer pipeline — tarball, checksum, install.sh, register — on a clean
+  # runner, not just the repo tests (which run against a local file://
+  # fixture). Dual-mode:
+  #   - push/main: the PUBLISHED edge artifact via the literal user one-liner
+  #     (post-publish proof of the release pipeline)
+  #   - PR: this PR's build artifacts via CARPENTER_DOWNLOAD_BASE=file:// —
+  #     the same lanes run pre-merge, so smoke is a required check
+  # A REAL opencode is installed first (curl installer on Linux, curl + brew
+  # lanes on macOS) so install.sh's auto-register branch runs against the
+  # real agent app. The diagnostic step reports which path each side chose
+  # (evidence for the macOS skill-path mismatch); assertions stay dual-path
+  # until triaged.
   smoke:
     name: smoke (${{ matrix.os }} / opencode via ${{ matrix.opencode_install }})
-    needs: release
+    needs: [build, release]
+    if: >-
+      !cancelled() && needs.build.result == 'success' &&
+      (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -89,14 +102,34 @@ jobs:
         include:
           - os: ubuntu-latest
             opencode_install: script
+            target: x86_64-unknown-linux-musl
           - os: macos-14
             opencode_install: script
+            target: aarch64-apple-darwin
           - os: macos-14
             opencode_install: brew
+            target: aarch64-apple-darwin
     env:
       CARPENTER_INSTALL_DIR: ${{ github.workspace }}/carpenter-bin
       OPENCODE_DISABLE_AUTOUPDATE: "1"
     steps:
+      - name: checkout (PR mode — install.sh from the PR head)
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+      - name: fetch PR-built artifacts (PR mode)
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@v4
+        with:
+          name: carpenter-${{ matrix.target }}
+          path: dist
+      - name: checksums (PR mode)
+        if: github.event_name == 'pull_request'
+        run: |
+          cd dist
+          case "$(uname -s)" in
+            Darwin) shasum -a 256 carpenter-${{ matrix.target }}.tar.gz > SHA256SUMS ;;
+            *) sha256sum carpenter-${{ matrix.target }}.tar.gz > SHA256SUMS ;;
+          esac
       - name: install opencode (script)
         if: matrix.opencode_install == 'script'
         run: |
@@ -112,7 +145,11 @@ jobs:
           opencode --version
       - name: install via the real user one-liner
         run: |
-          curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            CARPENTER_DOWNLOAD_BASE="file://${GITHUB_WORKSPACE}/dist" sh scripts/install.sh
+          else
+            curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh
+          fi
       - name: path report (diagnostic — never fails)
         if: always()
         run: |
