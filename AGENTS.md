@@ -117,8 +117,12 @@ every push to `main` rolls the `edge` prerelease — `x86_64-unknown-linux-musl`
 `curl | sh` one-liner; auto-registers into opencode when detected; Intel Mac
 users build from source) — then a post-publish **smoke job** verifies the
 published artifact through the real one-liner (version, howto, register,
-uninstall) on both lanes. `carpenter upgrade` (no flags) fetches that release —
-checksum-verified via the same pipeline — and re-registers the skill (adr/018).
+uninstall) against a **real opencode** (curl installer on Linux; curl + brew
+lanes on macOS), plus a never-failing path-report diagnostic capturing which
+skill path each side chose (evidence for the macOS skill-path mismatch;
+assertions stay dual-path until triaged). `carpenter upgrade` (no flags)
+fetches that release — checksum-verified via the same pipeline — and
+re-registers the skill (adr/018).
 
 ## Trunk-based development
 `main` is the trunk: always green, always shippable (every merge rolls `edge`).
