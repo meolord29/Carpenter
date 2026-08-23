@@ -6,7 +6,7 @@ Stop hunting for the perfect tutorial. Tell your agent what you want to learn,
 approve the outline it drafts, and start practicing on a notebook that grades you
 the second you hit Run.
 
-[ GIF: tell agent → approve → fill stub → PASS → progress ]
+<p align="center"><img src="assets/logo.png" alt="carpenter logo" width="360"></p>
 
 ## Why it clicks
 
