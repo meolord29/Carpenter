@@ -44,6 +44,7 @@ branches, no `.gitattributes` line-ending management exist.
 **full** gate suite (the `AGENTS.md` → Build & test commands): fmt → clippy
 (`-D warnings`) → `cargo xtask build` → `cargo test --workspace` → doc.
 `rust-toolchain.toml` pins stable; `uv` is installed via `setup-uv`.
-`release.yml` publishes the `edge` prerelease on every push to `main`
-(linux-musl + apple-silicon tarballs) and smoke-tests the published artifact
-via the real `curl | sh` one-liner on both lanes.
+`release.yml` publishes branch-governed channels (adr/020): pushes to
+`pre-release` roll the `edge` prerelease, pushes to `release` publish stable
+`vX.Y.Z` (linux-musl + apple-silicon tarballs), and smoke-tests each published
+artifact via the real `curl | sh` one-liner on both lanes.

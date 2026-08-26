@@ -1,9 +1,12 @@
 //! `upgrade` — replace the installed carpenter binary, then update the skill.
 //!
-//! Two modes (adr/018): **release** (default — fetch the GitHub `edge` tarball,
+//! Two modes (adr/018): **release** (default — fetch a published tarball,
 //! verify its checksum, extract, probe, atomically replace) and **source**
 //! (`--source` or config `source_dir` — rebuild via `cargo xtask build
-//! --release`). Both modes refresh the skill of every **registered** app
+//! --release`). Release mode picks its channel via `--channel stable|edge`
+//! (adr/020): `stable` (default) follows the Latest release published from the
+//! `release` branch; `edge` follows the rolling prerelease published from
+//! `pre-release`. Both modes refresh the skill of every **registered** app
 //! (installer parity — the confirming installer never registers a new app;
 //! adr/018 update). `--bin-dir`/`--no-skill` apply to both.
 
@@ -23,13 +26,15 @@ use crate::models::Data;
 const NOT_REGISTERED_WARNING: &str =
     "CLI not registered in any agent app — nothing to upgrade. Run `carpenter register`.";
 
-/// `upgrade [--source <p>] [--bin-dir <p>] [--no-skill]`.
+/// `upgrade [--channel stable|edge] [--source <p>] [--bin-dir <p>] [--no-skill]`.
 pub fn upgrade(
     paths: &Paths,
     source: Option<&str>,
     bin_dir: Option<&str>,
     no_skill: bool,
+    channel: &str,
 ) -> Result<Data, CarpenterError> {
+    let channel = release::Channel::parse(channel)?;
     let cfg = paths
         .config_file()
         .map(|p| config::load_from(&p))
@@ -37,7 +42,7 @@ pub fn upgrade(
     // `_stage` keeps the download dir alive until the binary is copied out.
     let (version, origin, built, _stage) = match resolve_mode(source, &cfg)? {
         Mode::Release => {
-            let staged = upgrade_from_release()?;
+            let staged = upgrade_from_release(channel)?;
             (
                 release::probe_version(&staged.bin)?,
                 staged.url.clone(),
@@ -93,9 +98,9 @@ fn resolve_mode(source: Option<&str>, cfg: &config::Config) -> Result<Mode, Carp
     Ok(Mode::Release)
 }
 
-/// Download + verify + extract the release for this platform into a temp stage
-/// dir (removed on drop — adr/018).
-fn upgrade_from_release() -> Result<Staged, CarpenterError> {
+/// Download + verify + extract the channel's release for this platform into a
+/// temp stage dir (removed on drop — adr/018).
+fn upgrade_from_release(channel: release::Channel) -> Result<Staged, CarpenterError> {
     let target = release::platform_target().ok_or_else(|| {
         CarpenterError::ValidationError(format!(
             "no release asset for {} {} — build from source with `--source <path>` \
@@ -105,7 +110,7 @@ fn upgrade_from_release() -> Result<Staged, CarpenterError> {
         ))
     })?;
     let tmp = release::stage_dir()?;
-    release::fetch_release(&release::download_base(), target, &tmp)
+    release::fetch_release(&release::download_base(channel), target, &tmp)
 }
 
 /// Run `cargo xtask build --release` in `dir`; return the built binary's path.
@@ -167,7 +172,22 @@ mod tests {
     fn upgrade_errors_when_source_dir_missing() {
         let paths = testutil::meta_setup();
         let missing = paths.root.join("no-such-src");
-        let err = upgrade(&paths, Some(missing.to_str().unwrap()), None, true).unwrap_err();
+        let err = upgrade(
+            &paths,
+            Some(missing.to_str().unwrap()),
+            None,
+            true,
+            "stable",
+        )
+        .unwrap_err();
+        assert!(matches!(err, CarpenterError::ValidationError(_)));
+        let _ = std::fs::remove_dir_all(&paths.root);
+    }
+
+    #[test]
+    fn upgrade_rejects_unknown_channel() {
+        let paths = testutil::meta_setup();
+        let err = upgrade(&paths, None, None, true, "nightly").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
         let _ = std::fs::remove_dir_all(&paths.root);
     }
@@ -177,7 +197,7 @@ mod tests {
         let paths = testutil::meta_setup();
         // config source_dir points at a non-dir → ValidationError (proves resolution)
         crate::commands::config::set(&paths, "source_dir", "/definitely/not/here").unwrap();
-        let err = upgrade(&paths, None, None, true).unwrap_err();
+        let err = upgrade(&paths, None, None, true, "stable").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
         let _ = std::fs::remove_dir_all(&paths.root);
     }
@@ -197,7 +217,7 @@ mod tests {
             "CARPENTER_DOWNLOAD_BASE",
             format!("file://{}", empty.display()),
         );
-        let err = upgrade(&paths, None, None, true).unwrap_err();
+        let err = upgrade(&paths, None, None, true, "stable").unwrap_err();
         std::env::remove_var("CARPENTER_DOWNLOAD_BASE");
         assert!(matches!(err, CarpenterError::StoreError(_)), "{err}");
         let _ = std::fs::remove_dir_all(&paths.root);
