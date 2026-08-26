@@ -4,6 +4,10 @@
 # End users:
 #   curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh
 #
+# Channels (adr/020): this stock script follows `edge`; the stable release
+# attaches a tag-patched copy (TAG="vX.Y.Z"), and /releases/latest/download/
+# serves the newest stable one.
+#
 # Test overrides (used by local verification, harmless to ignore):
 #   CARPENTER_DOWNLOAD_BASE  base URL replacing the GitHub release dir
 #   CARPENTER_INSTALL_DIR    destination dir (default ~/.local/bin)
