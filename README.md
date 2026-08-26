@@ -28,10 +28,9 @@ the second you hit Run.
 3. Approve the outline, fill in a practice stub, hit **Run** → **PASS / FAIL**.
 
 That's the whole loop. You never touch the CLI — the agent does.
-
 ## Install
 
-**Linux (x86_64) or macOS (Apple Silicon)** — one line:
+One line:
 
 ```sh
 curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh
@@ -39,45 +38,19 @@ curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install
 
 The binary lands in `~/.local/bin` (add it to `PATH` if the installer says so).
 Update later with `carpenter upgrade` (fetches the latest build + refreshes the
-skill). If `opencode` is on your machine, the installer also registers the
-carpenter skill into it; otherwise register manually:
+skill). To verify integrity, the release also ships `SHA256SUMS` next to each
+tarball.
+
+If `opencode` is on your machine, the installer offers to register the carpenter
+skill into it; you can also register manually:
 
 ```sh
-carpenter register --app opencode
+carpenter register --app opencode      # or: claude-code
 ```
-To verify integrity, the release also ships `SHA256SUMS` next to each tarball.
-
-**Any other platform** (incl. Intel Macs) — build from source.
-Needs [Rust](https://rustup.rs) and [`uv`](https://github.com/astral-sh/uv):
-
-```sh
-git clone https://github.com/meolord29/Carpenter carpenter
-cd carpenter
-cargo xtask build --release
-./target/release/carpenter install
-carpenter register --app opencode
-```
-
-## Developing carpenter
-
-Two build stages ([design/19](docs/design/19-dev-build.md)):
-
-- **release** — `cargo xtask build --release`: strict compile-time gates (every
-  command self-documents and is tested) + the ship binary.
-- **dev** — `cargo xtask build --dev`: relaxed gates, so a new command compiles
-  before its worked-example + test exist. `--capture-example` writes the example
-  atom from a real run; the `dev` command group
-  (`check`/`setup`/`clean`/`register`/`upgrade`) drives an isolated `.sandbox`
-  validation loop.
-
-To validate a new command end-to-end, switch to the `carpenter-dev-validate`
-agent (`.opencode/agents/`) — it builds dev, simulates real usage, and pauses for
-your sign-off before release. The repo-local dev skill is written by
-`carpenter dev register`.
 
 ## Learn more
 
-- [`AGENTS.md`](AGENTS.md) — how it works + contributor guide.
+- [`DEV.md`](DEV.md) — building and contributing to carpenter.
 - [`docs/`](docs/) — full design, schema, and command contracts.
 - `carpenter howto` — the full command manual.
 
