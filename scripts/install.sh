@@ -67,14 +67,52 @@ case ":${PATH}:" in
         ;;
 esac
 
-if command -v opencode >/dev/null 2>&1; then
-    say "opencode detected — registering carpenter skill"
-    if "${INSTALL_DIR}/carpenter" register --app opencode >/dev/null 2>&1; then
-        say "registered in opencode (skill + permission)"
+# Register the skill into detected agent apps. Interactive (a TTY is attached):
+# ask y/n per detected app, one by one. Non-interactive (CI, `curl | sh` under
+# automation): auto-register every detected app so unattended lanes never hang.
+# Prompts read /dev/tty — stdin carries the piped script under `curl | sh`.
+interactive=no
+if { [ -t 1 ] || [ -t 2 ]; } && [ -r /dev/tty ]; then
+    interactive=yes
+fi
+
+ask_register() { # $1 = app label → y/n from the user
+    printf 'carpenter: register the skill for %s? [y/N] ' "$1" >&2
+    read -r answer </dev/tty || return 1
+    case "$answer" in
+        y|Y|yes|YES|Yes) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+do_register() { # $1 = --app value, $2 = label for notes
+    if "${INSTALL_DIR}/carpenter" register --app "$1" >/dev/null 2>&1; then
+        say "registered in $2 (skill)"
     else
-        printf 'carpenter: note: register failed; run manually: %s register --app opencode\n' \
-            "${INSTALL_DIR}/carpenter" >&2
+        printf 'carpenter: note: register failed; run manually: %s register --app %s\n' \
+            "${INSTALL_DIR}/carpenter" "$1" >&2
     fi
+}
+
+detected=0
+for app in opencode claude-code; do
+    bin=$app
+    [ "$app" = "claude-code" ] && bin=claude
+    command -v "$bin" >/dev/null 2>&1 || continue
+    detected=1
+    if [ "$interactive" = "yes" ]; then
+        if ask_register "$app"; then
+            do_register "$app" "$app"
+        else
+            say "skipped $app (register later: carpenter register --app $app)"
+        fi
+    else
+        say "$bin detected — registering carpenter skill (non-interactive)"
+        do_register "$app" "$app"
+    fi
+done
+if [ "$detected" = "0" ]; then
+    printf 'carpenter: note: no agent app detected; register manually with: carpenter register --app opencode|claude-code\n' >&2
 fi
 
 say "installed $("${INSTALL_DIR}/carpenter" --version 2>/dev/null || echo carpenter)"

@@ -544,12 +544,12 @@ fn config_group() -> Command {
 
 fn register_subcommand() -> Command {
     Command::new("register")
-        .about("Register the carpenter skill with an agent app (writes SKILL.md + permission).")
+        .about("Register the carpenter skill with an agent app (writes SKILL.md; opencode also gets a permission entry).")
         .arg(
             Arg::new("app")
                 .long("app")
                 .default_value("opencode")
-                .help("Agent app (opencode|claude-code|agents)."),
+                .help("Agent app (opencode|claude-code)."),
         )
         .arg(
             Arg::new("print-skill")
@@ -561,12 +561,12 @@ fn register_subcommand() -> Command {
 
 fn deregister_subcommand() -> Command {
     Command::new("deregister")
-        .about("Deregister the carpenter skill (removes SKILL.md + permission).")
+        .about("Deregister the carpenter skill (removes SKILL.md; opencode also loses its permission entry).")
         .arg(
             Arg::new("app")
                 .long("app")
                 .default_value("opencode")
-                .help("Agent app (opencode|claude-code|agents)."),
+                .help("Agent app (opencode|claude-code)."),
         )
 }
 
@@ -711,6 +711,7 @@ fn paths_from(matches: &ArgMatches) -> Paths {
     Paths {
         root,
         config_dir: core::store::config_dir(),
+        home: core::store::home_dir(),
     }
 }
 

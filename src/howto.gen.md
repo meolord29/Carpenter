@@ -1276,9 +1276,9 @@ Value is coerced to the key's type.
 
 ## register
 
-Register the carpenter skill with an agent app (writes SKILL.md + permission).
+Register the carpenter skill with an agent app (writes SKILL.md; opencode also gets a permission entry).
 
-- `--app` — Agent app (opencode|claude-code|agents).
+- `--app` — Agent app (opencode|claude-code).
 - `--print-skill` — Print the rendered SKILL.md to stdout instead of writing.
 
 **example:**
@@ -1296,9 +1296,9 @@ Writes `SKILL.md` + merges the `permission.skill.carpenter="allow"` entry. `--pr
 
 ## deregister
 
-Deregister the carpenter skill (removes SKILL.md + permission).
+Deregister the carpenter skill (removes SKILL.md; opencode also loses its permission entry).
 
-- `--app` — Agent app (opencode|claude-code|agents).
+- `--app` — Agent app (opencode|claude-code).
 
 **example:**
 
@@ -1367,13 +1367,14 @@ carpenter upgrade --bin-dir ~/.local/bin
 
 Result (one envelope on stdout):
 ```json
-{"status":"ok","message":"upgraded: 0.7.0","data":{"upgraded":true,"version":"0.7.0","bin":"/home/u/.local/bin/carpenter","source":"https://github.com/meolord29/Carpenter/releases/download/edge/carpenter-x86_64-unknown-linux-musl.tar.gz","skill":{"refreshed":true,"app":"opencode","path":"/home/u/.config/opencode/skills/carpenter/SKILL.md"}}}
+{"status":"ok","message":"upgraded: 0.7.0","data":{"upgraded":true,"version":"0.7.0","bin":"/home/u/.local/bin/carpenter","source":"https://github.com/meolord29/Carpenter/releases/download/edge/carpenter-x86_64-unknown-linux-musl.tar.gz","skill":[{"refreshed":true,"app":"opencode","path":"/home/u/.config/opencode/skills/carpenter/SKILL.md"},{"refreshed":true,"app":"claude-code","path":"/home/u/.claude/skills/carpenter/SKILL.md"}]}}
 ```
 
 Fetches the GitHub `edge` release (checksum-verified), replaces the binary, and
-re-registers the skill. `--source <path>` (or config `source_dir`) rebuilds from
-a local checkout instead — that mode refreshes the skill only if registered.
-`--no-skill` skips the skill write (`skill:null`).
+refreshes the skill of every **registered** app (`skill` = one outcome per app;
+nothing registered ⇒ `{"refreshed":false,"reason":"not_registered",…}`).
+`--source <path>` (or config `source_dir`) rebuilds from a local checkout
+instead. `--no-skill` skips the skill write (`skill:null`).
 
 ## uninstall
 
@@ -1390,10 +1391,10 @@ carpenter uninstall --bin-dir ~/.local/bin
 
 Result (one envelope on stdout):
 ```json
-{"status":"ok","message":"uninstalled: /home/u/.local/bin/carpenter","data":{"uninstalled":true,"bin":"/home/u/.local/bin/carpenter","skill":{"app":"opencode","path":"/home/u/.config/opencode/skills/carpenter/SKILL.md","removed":true},"config_purged":false}}
+{"status":"ok","message":"uninstalled: /home/u/.local/bin/carpenter","data":{"uninstalled":true,"bin":"/home/u/.local/bin/carpenter","skill":[{"app":"opencode","path":"/home/u/.config/opencode/skills/carpenter/SKILL.md","removed":true},{"app":"claude-code","path":"/home/u/.claude/skills/carpenter/SKILL.md","removed":true}],"config_purged":false}}
 ```
 
-Inverse of `install`: removes the opencode skill (best-effort — `{"removed":false,"reason":"not_registered"}` when absent), then deletes `<bin_dir>/carpenter` (safe while running on Linux/macOS). `NotFound` when neither skill nor binary exists. `--purge-config` also removes the config file; course data is never touched.
+Inverse of `install`: removes the skill of every **registered** app (best-effort — `{"removed":false,"reason":"not_registered"}` when none), then deletes `<bin_dir>/carpenter` (safe while running on Linux/macOS). `NotFound` when neither skill nor binary exists. `--purge-config` also removes the config file; course data is never touched.
 
 ## link
 

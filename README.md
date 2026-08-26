@@ -19,7 +19,7 @@ the second you hit Run.
   you're stuck.
 
 > Experimental (`v0.7.0`) · Python/Jupyter · works with
-> [opencode](https://opencode.ai) · Apache-2.0
+> [opencode](https://opencode.ai) and claude code · Apache-2.0
 
 ## Try it
 
@@ -28,6 +28,7 @@ the second you hit Run.
 3. Approve the outline, fill in a practice stub, hit **Run** → **PASS / FAIL**.
 
 That's the whole loop. You never touch the CLI — the agent does.
+
 ## Install
 
 One line:
@@ -41,8 +42,9 @@ Update later with `carpenter upgrade` (fetches the latest build + refreshes the
 skill). To verify integrity, the release also ships `SHA256SUMS` next to each
 tarball.
 
-If `opencode` is on your machine, the installer offers to register the carpenter
-skill into it; you can also register manually:
+If `opencode` or `claude` is on your machine, the installer detects it and asks
+whether to register the carpenter skill (each app, one by one); you can also
+register manually:
 
 ```sh
 carpenter register --app opencode      # or: claude-code

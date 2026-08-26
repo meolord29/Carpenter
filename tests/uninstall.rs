@@ -90,7 +90,8 @@ fn uninstall_self_deletes_running_binary() {
     assert_eq!(env["status"], "ok", "{env}");
     assert_eq!(env["data"]["uninstalled"], true, "{env}");
     assert_eq!(env["data"]["bin"], bin.to_str().unwrap(), "{env}");
-    assert_eq!(env["data"]["skill"]["removed"], true, "{env}");
+    assert_eq!(env["data"]["skill"][0]["app"], "opencode", "{env}");
+    assert_eq!(env["data"]["skill"][0]["removed"], true, "{env}");
     assert_eq!(env["data"]["config_purged"], false, "{env}");
     assert!(!bin.exists(), "binary self-deleted");
     assert!(!skill_md.exists(), "skill removed");
@@ -236,6 +237,84 @@ fn install_sh_then_uninstall_reverses_footprint() {
         !opencode_has_carpenter_key(&perms),
         "permission key removed"
     );
+
+    let _ = std::fs::remove_dir_all(&root);
+    let _ = std::fs::remove_dir_all(&fixture);
+}
+
+/// The installer also detects claude code (`claude` on PATH) and registers into
+/// `~/.claude/skills/` (non-interactive lane: auto-register every detection);
+/// `uninstall` reverses that footprint too.
+#[test]
+fn install_sh_detects_and_registers_claude_code() {
+    let Some(target) = common::platform_target() else {
+        return;
+    };
+    if !Command::new("sh").arg("-c").arg("exit 0").status().is_ok() {
+        return;
+    }
+    let fixture = release_fixture(target);
+    let root = setup("uninstall-claude");
+    let bin_dir = root.join("bin");
+    let stub = root.join("stub");
+    std::fs::create_dir_all(&stub).unwrap();
+    std::fs::write(stub.join("claude"), "#!/bin/sh\nexit 0\n").unwrap();
+    unix_chmod(&stub.join("claude"));
+
+    let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("scripts")
+        .join("install.sh");
+    let out = Command::new("sh")
+        .arg(&script)
+        .env("HOME", &root)
+        .env("XDG_CONFIG_HOME", common::config_root(&root))
+        .env(
+            "CARPENTER_DOWNLOAD_BASE",
+            format!("file://{}", fixture.display()),
+        )
+        .env("CARPENTER_INSTALL_DIR", &bin_dir)
+        .env(
+            "PATH",
+            format!(
+                "{}:{}",
+                stub.display(),
+                std::env::var("PATH").unwrap_or_default()
+            ),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "install.sh failed: {}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let bin = bin_dir.join("carpenter");
+    let skill_md = root
+        .join(".claude")
+        .join("skills")
+        .join("carpenter")
+        .join("SKILL.md");
+    assert!(
+        bin.is_file(),
+        "installer placed binary at {}",
+        bin.display()
+    );
+    assert!(
+        skill_md.is_file(),
+        "installer registered claude-code skill at {}",
+        skill_md.display()
+    );
+
+    // uninstall from the installed copy — reverses the claude-code footprint
+    let (ok, env) = run(sandboxed(&bin, &root)
+        .arg("uninstall")
+        .arg("--bin-dir")
+        .arg(&bin_dir));
+    assert!(ok, "{env}");
+    assert!(!bin.exists(), "binary removed");
+    assert!(!skill_md.exists(), "claude-code skill removed");
 
     let _ = std::fs::remove_dir_all(&root);
     let _ = std::fs::remove_dir_all(&fixture);

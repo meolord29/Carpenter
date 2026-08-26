@@ -43,14 +43,20 @@ so the skill loads without prompting. `deregister` removes only the `carpenter` 
 under `skill` (leaves the rest of the file intact). Merge, never overwrite.
 
 ## Multi-app selector
-`--app <name>` (TTY prompt if omitted, else default `opencode`):
-| app | skills dir | status |
-|-----|-----------|--------|
-| `opencode` | `~/.config/opencode/skills/` | implemented |
-| `claude-code` | `~/.claude/skills/` | not yet supported |
-| `agents` | `~/.agents/skills/` | not yet supported |
+`--app <name>` (default `opencode`; never an interactive prompt — an agent cannot
+answer one):
+| app | skills dir | anchor | status |
+|-----|-----------|--------|--------|
+| `opencode` | `~/.config/opencode/skills/` | XDG root | implemented |
+| `claude-code` | `~/.claude/skills/` | home dir | implemented |
+| `agents` | `~/.agents/skills/` | — | not yet supported |
 
-All three use the same `SKILL.md` format, so adding one is a single match arm.
+Both implemented apps use the same rendered `SKILL.md`; they differ in anchor
+(`skill_path` takes the XDG root **and** the home dir) and in permissions:
+opencode needs the `opencode.json` allow entry, claude code auto-discovers
+`~/.claude/skills/` — no permission merge. Adding `agents` is one more match arm.
+`upgrade`/`uninstall` fan out over all apps but touch only **registered** ones
+(skill file present).
 
 ## Commands
 | cmd | behavior |

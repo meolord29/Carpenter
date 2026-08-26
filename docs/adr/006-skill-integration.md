@@ -26,3 +26,10 @@ command list.
 − The agent calls carpenter through `bash` (running `carpenter <cmd>`), so it does
   not get typed per-command tool args; it relies on `howto` + `docs/specs/` for
   argument shapes. Acceptable: validation stays in carpenter either way.
+
+## Update (2026-08-27)
+
+`claude-code` is implemented (`App::ClaudeCode`): same rendered `SKILL.md`, written
+to `~/.claude/skills/carpenter/SKILL.md` (a home-dir anchor, not the XDG root) with
+**no permission merge** — claude code auto-discovers skills. `agents` remains
+unimplemented. See [design/15](../design/15-opencode-integration.md).

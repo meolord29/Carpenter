@@ -1,10 +1,11 @@
 //! `upgrade` — replace the installed carpenter binary, then update the skill.
 //!
 //! Two modes (adr/018): **release** (default — fetch the GitHub `edge` tarball,
-//! verify its checksum, extract, probe, atomically replace; always (re-)registers
-//! the skill, mirroring `scripts/install.sh`) and **source** (`--source` or
-//! config `source_dir` — rebuild via `cargo xtask build --release`, best-effort
-//! skill refresh). `--bin-dir`/`--no-skill` apply to both.
+//! verify its checksum, extract, probe, atomically replace) and **source**
+//! (`--source` or config `source_dir` — rebuild via `cargo xtask build
+//! --release`). Both modes refresh the skill of every **registered** app
+//! (installer parity — the confirming installer never registers a new app;
+//! adr/018 update). `--bin-dir`/`--no-skill` apply to both.
 
 use std::path::{Path, PathBuf};
 
@@ -20,7 +21,7 @@ use crate::models::Data;
 
 /// The single-sourced "not registered" warning (spec 18).
 const NOT_REGISTERED_WARNING: &str =
-    "CLI not registered in opencode — nothing to upgrade. Run `carpenter register`.";
+    "CLI not registered in any agent app — nothing to upgrade. Run `carpenter register`.";
 
 /// `upgrade [--source <p>] [--bin-dir <p>] [--no-skill]`.
 pub fn upgrade(
@@ -63,7 +64,7 @@ pub fn upgrade(
     let skill_outcome = if no_skill {
         None
     } else {
-        Some(skill_outcome_for(source.is_some(), paths))
+        Some(skill_outcome_for(paths))
     };
     Ok(Data::Upgrade {
         upgraded: true,
@@ -127,25 +128,34 @@ fn build_from_source(source_dir: &Path) -> Result<PathBuf, CarpenterError> {
     Ok(built)
 }
 
-/// Release mode always (re-)registers (installer parity); source mode refreshes
-/// only when already registered. Best-effort: never fails the upgrade.
-fn skill_outcome_for(source_mode: bool, paths: &Paths) -> Value {
-    let root = match paths.xdg_root() {
-        Ok(r) => r,
-        Err(e) => {
-            return json!({"refreshed": false, "reason": "no_xdg_root", "error": e.to_string()})
+/// Refresh the skill of every registered app (skill file present), best-effort:
+/// a failure never fails the upgrade, and no app is registered that wasn't
+/// already (the installer only registers on confirmation — parity).
+fn skill_outcome_for(paths: &Paths) -> Value {
+    let (root, home) = match (paths.xdg_root(), paths.home_dir()) {
+        (Ok(r), Ok(h)) => (r, h),
+        (Err(e), _) | (_, Err(e)) => {
+            return json!({"refreshed": false, "reason": "no_anchor", "error": e.to_string()})
         }
     };
-    if source_mode {
-        let skill_path = App::Opencode.skill_path(root);
-        if !skill_path.exists() {
-            return json!({"refreshed": false, "reason": "not_registered", "warning": NOT_REGISTERED_WARNING});
-        }
+    let registered: Vec<App> = App::all()
+        .into_iter()
+        .filter(|app| app.skill_path(root, home).exists())
+        .collect();
+    if registered.is_empty() {
+        return json!({"refreshed": false, "reason": "not_registered", "warning": NOT_REGISTERED_WARNING});
     }
-    match skill::register(App::Opencode, root) {
-        Ok(r) => json!({"refreshed": true, "app": r.app, "path": r.path}),
-        Err(e) => json!({"refreshed": false, "reason": "refresh_failed", "error": e.to_string()}),
-    }
+    Value::Array(
+        registered
+            .into_iter()
+            .map(|app| match skill::register(app, root, home) {
+                Ok(r) => json!({"refreshed": true, "app": r.app, "path": r.path}),
+                Err(e) => {
+                    json!({"refreshed": false, "reason": "refresh_failed", "error": e.to_string()})
+                }
+            })
+            .collect(),
+    )
 }
 
 #[cfg(test)]
@@ -196,6 +206,31 @@ mod tests {
     #[test]
     fn not_registered_warning_is_stable() {
         // guards the single-sourced string against drift (spec 18)
-        assert!(NOT_REGISTERED_WARNING.contains("not registered in opencode"));
+        assert!(NOT_REGISTERED_WARNING.contains("not registered in any agent app"));
+    }
+
+    #[test]
+    fn skill_outcome_refreshes_only_registered_apps() {
+        let paths = testutil::meta_setup();
+        let root = paths.xdg_root().unwrap();
+        let home = paths.home_dir().unwrap();
+        // nothing registered → single not_registered outcome
+        let out = skill_outcome_for(&paths);
+        assert_eq!(out["reason"], json!("not_registered"));
+        // claude-code only → exactly one refresh, for claude-code
+        skill::register(App::ClaudeCode, root, home).unwrap();
+        let out = skill_outcome_for(&paths);
+        let arr = out.as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["app"], json!("claude-code"));
+        assert_eq!(arr[0]["refreshed"], json!(true));
+        // both registered → two refreshes, order = App::all()
+        skill::register(App::Opencode, root, home).unwrap();
+        let out = skill_outcome_for(&paths);
+        let arr = out.as_array().unwrap();
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0]["app"], json!("opencode"));
+        assert_eq!(arr[1]["app"], json!("claude-code"));
+        let _ = std::fs::remove_dir_all(&paths.root);
     }
 }
