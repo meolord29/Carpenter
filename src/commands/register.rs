@@ -16,7 +16,7 @@ pub fn register(paths: &Paths, app: &str, print_skill: bool) -> Result<Data, Car
             skill: skill::render()?,
         });
     }
-    let r = skill::register(app, paths.xdg_root()?)?;
+    let r = skill::register(app, paths.xdg_root()?, paths.home_dir()?)?;
     Ok(Data::Register {
         app: r.app,
         path: r.path,
@@ -77,8 +77,34 @@ mod tests {
     #[test]
     fn register_rejects_unsupported_app() {
         let paths = testutil::meta_setup();
-        let err = register(&paths, "claude-code", false).unwrap_err();
+        let err = register(&paths, "agents", false).unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
+        let _ = std::fs::remove_dir_all(paths.root);
+    }
+
+    #[test]
+    fn register_claude_code_ok() {
+        let paths = testutil::meta_setup();
+        let Data::Register {
+            app,
+            path,
+            installed,
+            ..
+        } = register(&paths, "claude-code", false).expect("register")
+        else {
+            panic!("Register");
+        };
+        assert_eq!(app, "claude-code");
+        assert!(installed);
+        assert!(
+            path.ends_with(".claude/skills/carpenter/SKILL.md"),
+            "{path}"
+        );
+        assert!(paths
+            .home_dir()
+            .unwrap()
+            .join(".claude/skills/carpenter/SKILL.md")
+            .exists());
         let _ = std::fs::remove_dir_all(paths.root);
     }
 }

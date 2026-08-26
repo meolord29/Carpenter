@@ -1,7 +1,7 @@
 //! e2e: `upgrade` release mode against a `file://` fixture (adr/018) — the
 //! fixture reproduces the release layout (`tarball` + `SHA256SUMS`) using the
 //! real test binary, then `upgrade` must download-verify-extract-probe-replace
-//! and re-register the skill.
+//! and refresh the registered apps' skills.
 
 mod common;
 
@@ -14,7 +14,7 @@ use carpenter::models::Data;
 use common::{release_fixture, unique};
 
 #[test]
-fn upgrade_release_mode_installs_and_registers() {
+fn upgrade_release_mode_installs_and_refreshes_registered_skill() {
     let Some(target) = common::platform_target() else {
         return; // no published asset on this platform (mapping covered in unit tests)
     };
@@ -26,9 +26,12 @@ fn upgrade_release_mode_installs_and_registers() {
     let root = unique("root");
     let paths = Paths {
         config_dir: Some(root.join("xdg").join("carpenter")),
+        home: Some(root.join("home")),
         root,
     };
     let bin_dir = paths.root.join("bin");
+    // registered apps get refreshed; nothing is registered by surprise
+    carpenter::commands::register::register(&paths, "opencode", false).expect("pre-register");
 
     let Data::Upgrade {
         upgraded,
@@ -48,8 +51,13 @@ fn upgrade_release_mode_installs_and_registers() {
         "{source}"
     );
     assert!(Path::new(&bin).is_file(), "binary at {bin}");
-    let refreshed = skill.expect("skill written");
-    assert_eq!(refreshed["refreshed"], true, "{refreshed}");
+    let outcomes = skill.expect("skill written");
+    let outcomes = outcomes
+        .as_array()
+        .unwrap_or_else(|| panic!("per-app outcomes, got {outcomes}"));
+    assert_eq!(outcomes.len(), 1);
+    assert_eq!(outcomes[0]["app"], "opencode");
+    assert_eq!(outcomes[0]["refreshed"], true, "{outcomes:?}");
     let skill_md = paths
         .root
         .join("xdg")

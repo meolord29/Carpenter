@@ -9,7 +9,7 @@ use crate::models::Data;
 /// `deregister [--app opencode]`.
 pub fn deregister(paths: &Paths, app: &str) -> Result<Data, CarpenterError> {
     let app = App::parse(app)?;
-    let d = skill::deregister(app, paths.xdg_root()?)?;
+    let d = skill::deregister(app, paths.xdg_root()?, paths.home_dir()?)?;
     Ok(Data::Deregister {
         app: d.app,
         path: d.path,

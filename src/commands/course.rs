@@ -206,6 +206,7 @@ mod tests {
         Paths {
             root,
             config_dir: Some(config_dir),
+            home: None,
         }
     }
 
