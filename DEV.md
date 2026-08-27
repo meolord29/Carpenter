@@ -37,6 +37,34 @@ The end-to-end authoring recipe lives in
   and request flow.
 - [docs/adr/](docs/adr/) — why the non-obvious decisions were made.
 
+## Releases (branch-governed channels)
+
+Two channels, governed by two long-lived branches
+([adr/020](docs/adr/020-branch-governed-channels.md)):
+
+```
+ivan/<topic> ──PR──▶ main          trunk; gates + PR smoke; publishes nothing
+main ──merge──▶ pre-release        rolls the `edge` prerelease (canary channel)
+pre-release ──merge──▶ release     publishes stable vX.Y.Z (marked Latest)
+```
+
+- **`edge` (unstable)** — a rolling prerelease that `release.yml` re-creates on
+  every push to `pre-release`. Canary users soak each build before promotion.
+- **stable (`vX.Y.Z`)** — immutable, versioned from `Cargo.toml`, published on
+  every push to `release`. GitHub marks it **Latest**, so the README one-liner
+  and `carpenter upgrade` (default `--channel stable`) follow it.
+
+**Promotion checklist** (pre-release → release PR):
+1. Bump `version` in `Cargo.toml` (and `Cargo.lock`) in the promotion PR.
+2. Merge; CI tags `v<version>` and publishes stable; the smoke lanes verify the
+   published artifact via the `/latest/` one-liner.
+
+**Rollback**: stable tags are immutable — install any previous `vX.Y.Z` by
+substituting its tag for `latest` in the install URL.
+
+`--channel edge` on `carpenter upgrade` (or the edge install one-liner) opts
+into the canary channel.
+
 ## Contributing flow
 
 Trunk-based: short-lived `ivan/<topic>` branches off `main`, green CI, delete

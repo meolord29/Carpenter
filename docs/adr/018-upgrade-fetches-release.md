@@ -71,3 +71,12 @@ Parity is preserved with the updated installer, which registers only what the
 user confirmed (non-interactive lanes auto-register detected apps).
 `skill` is an array of per-app outcomes when any app is registered. See
 [adr/006](006-skill-integration.md) update.
+
+## Update (2026-08-27, channels)
+
+The release fetched by release mode is now channel-governed (adr/020): default
+`--channel stable` follows the **Latest** release (`releases/latest/download`)
+published from the `release` branch; `--channel edge` follows the rolling
+prerelease this ADR introduced. `edge` is no longer the default anywhere.
+The `edge` tag itself stopped rolling on every push to `main` — it now rolls on
+pushes to `pre-release`.

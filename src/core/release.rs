@@ -14,8 +14,39 @@ use crate::core::store::io_to_store;
 
 /// GitHub repo that hosts releases.
 pub const REPO: &str = "meolord29/Carpenter";
-/// The rolling prerelease tag `release.yml` publishes.
+/// The rolling prerelease tag the `pre-release` branch publishes (adr/020).
 pub const TAG: &str = "edge";
+
+/// Which published channel `upgrade` fetches (adr/020): stable is the default;
+/// `edge` is the opt-in canary channel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Channel {
+    /// Latest stable release (`releases/latest/download`).
+    Stable,
+    /// Rolling `edge` prerelease (`releases/download/edge`).
+    Edge,
+}
+
+impl Channel {
+    /// Parse + validate a `--channel` value.
+    pub fn parse(s: &str) -> Result<Channel, CarpenterError> {
+        match s {
+            "stable" => Ok(Channel::Stable),
+            "edge" => Ok(Channel::Edge),
+            other => Err(CarpenterError::ValidationError(format!(
+                "unknown channel {other:?} (stable|edge)"
+            ))),
+        }
+    }
+
+    /// Asset base URL for the channel.
+    pub fn base_url(self) -> String {
+        match self {
+            Channel::Stable => format!("https://github.com/{REPO}/releases/latest/download"),
+            Channel::Edge => format!("https://github.com/{REPO}/releases/download/{TAG}"),
+        }
+    }
+}
 
 /// Map an OS/ARCH pair to the published release target triple (`None` = no asset).
 pub fn target_for(os: &str, arch: &str) -> Option<&'static str> {
@@ -32,9 +63,8 @@ pub fn platform_target() -> Option<&'static str> {
 }
 
 /// Base URL for release assets; `CARPENTER_DOWNLOAD_BASE` overrides (tests/mirrors).
-pub fn download_base() -> String {
-    std::env::var("CARPENTER_DOWNLOAD_BASE")
-        .unwrap_or_else(|_| format!("https://github.com/{REPO}/releases/download/{TAG}"))
+pub fn download_base(channel: Channel) -> String {
+    std::env::var("CARPENTER_DOWNLOAD_BASE").unwrap_or_else(|_| channel.base_url())
 }
 
 /// The per-OS checksum tool (and args) used to verify `SHA256SUMS`. Public for
@@ -205,6 +235,27 @@ mod tests {
         );
         assert_eq!(target_for("windows", "x86_64"), None);
         assert_eq!(target_for("linux", "aarch64"), None);
+    }
+
+    #[test]
+    fn channel_parse_branches() {
+        assert_eq!(Channel::parse("stable").unwrap(), Channel::Stable);
+        assert_eq!(Channel::parse("edge").unwrap(), Channel::Edge);
+        let err = Channel::parse("nightly").unwrap_err();
+        assert!(matches!(err, CarpenterError::ValidationError(_)), "{err}");
+    }
+
+    #[test]
+    fn channel_base_urls_pin_the_contract() {
+        // stable follows GitHub's Latest pointer; edge pins the rolling tag
+        assert_eq!(
+            Channel::Stable.base_url(),
+            "https://github.com/meolord29/Carpenter/releases/latest/download"
+        );
+        assert_eq!(
+            Channel::Edge.base_url(),
+            "https://github.com/meolord29/Carpenter/releases/download/edge"
+        );
     }
 
     #[test]

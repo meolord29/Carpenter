@@ -39,7 +39,14 @@ fn upgrade_release_mode_installs_and_refreshes_registered_skill() {
         bin,
         source,
         skill,
-    } = upgrade(&paths, None, Some(bin_dir.to_str().unwrap()), false).expect("upgrade")
+    } = upgrade(
+        &paths,
+        None,
+        Some(bin_dir.to_str().unwrap()),
+        false,
+        "stable",
+    )
+    .expect("upgrade")
     else {
         panic!("Upgrade");
     };
@@ -68,9 +75,14 @@ fn upgrade_release_mode_installs_and_refreshes_registered_skill() {
     assert!(skill_md.is_file(), "skill at {}", skill_md.display());
 
     // --no-skill variant against the same fixture: binary replaced, skill null
-    let Data::Upgrade { skill, .. } =
-        upgrade(&paths, None, Some(bin_dir.to_str().unwrap()), true).expect("upgrade again")
-    else {
+    let Data::Upgrade { skill, .. } = upgrade(
+        &paths,
+        None,
+        Some(bin_dir.to_str().unwrap()),
+        true,
+        "stable",
+    )
+    .expect("upgrade again") else {
         panic!("Upgrade");
     };
     assert!(skill.is_none());

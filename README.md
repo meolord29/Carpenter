@@ -34,13 +34,13 @@ That's the whole loop. You never touch the CLI — the agent does.
 One line:
 
 ```sh
-curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh
+curl -LsSf https://github.com/meolord29/Carpenter/releases/latest/download/install.sh | sh
 ```
 
 The binary lands in `~/.local/bin` (add it to `PATH` if the installer says so).
-Update later with `carpenter upgrade` (fetches the latest build + refreshes the
-skill). To verify integrity, the release also ships `SHA256SUMS` next to each
-tarball.
+Update later with `carpenter upgrade` (fetches the latest stable build +
+refreshes the skill). To verify integrity, the release also ships `SHA256SUMS`
+next to each tarball.
 
 If `opencode` or `claude` is on your machine, the installer detects it and asks
 whether to register the carpenter skill (each app, one by one); you can also
@@ -49,6 +49,19 @@ register manually:
 ```sh
 carpenter register --app opencode      # or: claude-code
 ```
+
+<details>
+<summary><strong>Unstable channel (edge)</strong></summary>
+
+Prefer to soak the newest builds? The `edge` prerelease rolls on every merge
+into the `pre-release` branch:
+
+```sh
+curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh
+```
+
+Stay on it with `carpenter upgrade --channel edge`.
+</details>
 
 ## Learn more
 

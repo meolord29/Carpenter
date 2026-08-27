@@ -36,14 +36,14 @@ pub mod examples {
                 },
             ),
             (
-                "upgrade [--source <p>] [--bin-dir <p>] [--no-skill]",
-                "no flag → GitHub `edge` release; `--source` → config `source_dir` → local build",
+                "upgrade [--channel stable|edge] [--source <p>] [--bin-dir <p>] [--no-skill]",
+                "no flag → latest **stable** release; `--channel edge` → rolling prerelease; `--source` → config `source_dir` → local build",
                 "`skill` = per-app refresh outcomes (one per registered app): `[{\"refreshed\":true,\"app\":\"opencode\",…},{\"refreshed\":true,\"app\":\"claude-code\",…}]` · nothing registered ⇒ `{refreshed:false,reason:\"not_registered\",warning:\"…\"}` · `--no-skill` ⇒ `skill:null`",
                 Data::Upgrade {
                     upgraded: true,
                     version: env!("CARGO_PKG_VERSION").into(),
                     bin: String::from("~/.local/bin/carpenter"),
-                    source: String::from("https://github.com/meolord29/Carpenter/releases/download/edge/carpenter-x86_64-unknown-linux-musl.tar.gz"),
+                    source: String::from("https://github.com/meolord29/Carpenter/releases/latest/download/carpenter-x86_64-unknown-linux-musl.tar.gz"),
                     skill: Some(json!([
                         {"refreshed": true, "app": "opencode", "path": "~/.config/opencode/skills/carpenter/SKILL.md"},
                         {"refreshed": true, "app": "claude-code", "path": "~/.claude/skills/carpenter/SKILL.md"}

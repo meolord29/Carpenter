@@ -34,6 +34,8 @@ Gates: `rustfmt`, `clippy -D warnings`, `cargo doc --no-deps -- -D warnings`.
 pins stable; `uv` is installed (`astral-sh/setup-uv`) so
 `uv_is_available_in_this_env` passes. The two `python3` probes (compare parity,
 helper validity) `return` on spawn failure and no-op, not fail, where `python3`
-is absent. `release.yml` additionally smoke-tests the published `edge` artifact
-via the real `curl | sh` one-liner on both lanes (black-box: version, howto,
-register, uninstall).
+is absent. `release.yml` additionally smoke-tests each **published** artifact via the real
+`curl | sh` one-liner on both lanes (black-box: version, howto, register,
+uninstall): the `edge` prerelease on `pre-release` pushes, the Latest stable on
+`release` pushes (adr/020); PRs run the same lanes against `file://` PR builds
+pre-merge.

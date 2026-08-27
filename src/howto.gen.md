@@ -1353,8 +1353,9 @@ Default bin dir from config (`bin_dir` → ~/.local/bin).
 
 ## upgrade
 
-Rebuild from a source checkout and replace the installed binary.
+Replace the installed binary from a published release (or a source checkout) and refresh the skill.
 
+- `--channel <CHANNEL>` — Release channel to fetch (stable|edge).
 - `--source <PATH>` — Source checkout (default: config source_dir).
 - `--bin-dir <PATH>` — Install target (default: config bin_dir).
 - `--no-skill` — Skip the skill auto-refresh (skill:null).
@@ -1367,14 +1368,15 @@ carpenter upgrade --bin-dir ~/.local/bin
 
 Result (one envelope on stdout):
 ```json
-{"status":"ok","message":"upgraded: 0.7.0","data":{"upgraded":true,"version":"0.7.0","bin":"/home/u/.local/bin/carpenter","source":"https://github.com/meolord29/Carpenter/releases/download/edge/carpenter-x86_64-unknown-linux-musl.tar.gz","skill":[{"refreshed":true,"app":"opencode","path":"/home/u/.config/opencode/skills/carpenter/SKILL.md"},{"refreshed":true,"app":"claude-code","path":"/home/u/.claude/skills/carpenter/SKILL.md"}]}}
+{"status":"ok","message":"upgraded: 0.7.0","data":{"upgraded":true,"version":"0.7.0","bin":"/home/u/.local/bin/carpenter","source":"https://github.com/meolord29/Carpenter/releases/latest/download/carpenter-x86_64-unknown-linux-musl.tar.gz","skill":[{"refreshed":true,"app":"opencode","path":"/home/u/.config/opencode/skills/carpenter/SKILL.md"},{"refreshed":true,"app":"claude-code","path":"/home/u/.claude/skills/carpenter/SKILL.md"}]}}
 ```
 
-Fetches the GitHub `edge` release (checksum-verified), replaces the binary, and
+Fetches the latest **stable** release (checksum-verified), replaces the binary, and
 refreshes the skill of every **registered** app (`skill` = one outcome per app;
 nothing registered ⇒ `{"refreshed":false,"reason":"not_registered",…}`).
-`--source <path>` (or config `source_dir`) rebuilds from a local checkout
-instead. `--no-skill` skips the skill write (`skill:null`).
+`--channel edge` follows the rolling prerelease instead; `--source <path>` (or
+config `source_dir`) rebuilds from a local checkout. `--no-skill` skips the
+skill write (`skill:null`).
 
 ## uninstall
 

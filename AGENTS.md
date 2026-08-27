@@ -111,26 +111,35 @@ CI (`.github/workflows/ci.yml`) mirrors these gates on an
 `ubuntu-latest`/`macos-14` matrix (the two supported OSes —
 [design/17](docs/design/17-cross-platform.md),
 [adr/012](docs/adr/012-cross-platform-paths.md)) — `rust-toolchain.toml`
-pins stable and `uv` is installed. Releases (`.github/workflows/release.yml`):
-every push to `main` rolls the `edge` prerelease — `x86_64-unknown-linux-musl`
-+ `aarch64-apple-darwin` tarballs, `SHA256SUMS`, and `scripts/install.sh` (the
-`curl | sh` one-liner; auto-registers into opencode when detected; Intel Mac
-users build from source) — then a **smoke job** verifies the artifact through
-the real one-liner (version, howto, register, uninstall) against a **real
-opencode** (curl installer on Linux; curl + brew lanes on macOS), plus a
-never-failing path-report diagnostic capturing which skill path each side chose
-(evidence for the macOS skill-path mismatch; assertions stay dual-path until
-triaged). The same smoke lanes run **pre-merge on PRs** against PR-built
-artifacts (`CARPENTER_DOWNLOAD_BASE=file://`), and the release job is
-push-only — so a PR can never publish `edge` nor merge with red smoke.
-`carpenter upgrade` (no flags) fetches that release — checksum-verified via
-the same pipeline — and re-registers the skill (adr/018).
+pins stable and `uv` is installed. Releases (`.github/workflows/release.yml`)
+are branch-governed channels ([adr/020](docs/adr/020-branch-governed-channels.md)):
+merges to `main` publish nothing; a merge `main → pre-release` rolls the `edge`
+prerelease (canary), and a merge `pre-release → release` publishes an immutable
+stable `vX.Y.Z` (version bumped in the promotion PR; marked Latest). Each
+publish ships `x86_64-unknown-linux-musl` + `aarch64-apple-darwin` tarballs,
+`SHA256SUMS`, and a channel-correct `scripts/install.sh` (stable's is
+tag-patched so it can never fetch edge bits; the `curl | sh` one-liner
+auto-registers into detected agent apps; Intel Mac users build from source) —
+then a **smoke job** verifies the published artifact through the real one-liner
+(version, howto, register, uninstall) against a **real opencode** (curl
+installer on Linux; curl + brew lanes on macOS), plus a never-failing
+path-report diagnostic capturing which skill path each side chose (evidence for
+the macOS skill-path mismatch; assertions stay dual-path until triaged). The
+same smoke lanes run **pre-merge on PRs** against PR-built artifacts
+(`CARPENTER_DOWNLOAD_BASE=file://`), and the release job is push-only — so a PR
+can never publish nor merge with red smoke. `carpenter upgrade` (no flags)
+fetches the Latest stable release — checksum-verified via the same pipeline —
+and refreshes registered apps' skills; `--channel edge` opts into the canary
+(adr/018, adr/020).
 
 ## Trunk-based development
-`main` is the trunk: always green, always shippable (every merge rolls `edge`).
+`main` is the trunk: always green, always shippable (merges publish nothing;
+channels cut separately — adr/020).
 - **Short-lived branches only**: `ivan/<topic>`, target ≤1 day of work, one
   concern per branch. No long-lived branches — unfinished work lands dark
-  behind the `dev` feature flag (adr/016) instead of aging on a branch.
+  behind the `dev` feature flag (adr/016) instead of aging on a branch. The
+  sanctioned exceptions are the two **channel branches** (`pre-release`,
+  `release`), which exist to cut releases, not to develop on.
 - **Merge green or don't merge**: ci.yml must pass on the branch head; rebase
   onto `main` before merging if it has moved. Delete the branch after merge.
 - **Branch protection** on `main` enforces the checks — gates, build, and the

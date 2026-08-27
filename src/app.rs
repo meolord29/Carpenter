@@ -66,7 +66,14 @@ pub fn cli() -> Command {
         )
         .subcommand(
             Command::new("upgrade")
-                .about("Rebuild from a source checkout and replace the installed binary.")
+                .about("Replace the installed binary from a published release (or a source checkout) and refresh the skill.")
+                .arg(
+                    Arg::new("channel")
+                        .long("channel")
+                        .value_name("CHANNEL")
+                        .default_value("stable")
+                        .help("Release channel to fetch (stable|edge)."),
+                )
                 .arg(
                     Arg::new("source")
                         .long("source")
@@ -688,7 +695,15 @@ fn dispatch(paths: &Paths, matches: &ArgMatches) -> Result<Data, core::error::Ca
         Some(("upgrade", m)) => {
             let source = m.get_one::<String>("source").map(|s| s.as_str());
             let bin_dir = m.get_one::<String>("bin-dir").map(|s| s.as_str());
-            commands::upgrade::upgrade(paths, source, bin_dir, m.get_flag("no-skill"))
+            commands::upgrade::upgrade(
+                paths,
+                source,
+                bin_dir,
+                m.get_flag("no-skill"),
+                m.get_one::<String>("channel")
+                    .map(|s| s.as_str())
+                    .unwrap_or("stable"),
+            )
         }
         Some(("uninstall", m)) => {
             let bin_dir = m.get_one::<String>("bin-dir").map(|s| s.as_str());
