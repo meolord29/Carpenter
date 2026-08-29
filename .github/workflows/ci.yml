@@ -3,7 +3,7 @@ name: ci
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, nightly]
 
 permissions:
   contents: read
@@ -13,6 +13,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # adr/021: `main` is the frozen release branch — the only branch that may
+  # merge into it is `nightly`. Fail any other PR targeting main.
+  guard:
+    name: guard (only nightly merges into main)
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: assert head branch is nightly
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ "$HEAD_REF" != "nightly" ]; then
+            echo "::error::main only accepts merges from the nightly branch (adr/021); got '$HEAD_REF'"
+            exit 1
+          fi
+
   gates:
     name: gates (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

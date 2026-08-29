@@ -18,7 +18,7 @@ the second you hit Run.
 - **Live progress.** Ask the agent how you're doing — it shows what's done and where
   you're stuck.
 
-> Experimental (`v0.7.1`) · Python/Jupyter · works with
+> Experimental (`v0.8.0`) · Python/Jupyter · works with
 > [opencode](https://opencode.ai) and claude code · Apache-2.0
 
 ## Try it
@@ -38,9 +38,7 @@ curl -LsSf https://github.com/meolord29/Carpenter/releases/latest/download/insta
 ```
 
 The binary lands in `~/.local/bin` (add it to `PATH` if the installer says so).
-Update later with `carpenter upgrade` (fetches the latest stable build +
-refreshes the skill). To verify integrity, the release also ships `SHA256SUMS`
-next to each tarball.
+Update later with `carpenter upgrade` (it also refreshes the skill).
 
 If `opencode` or `claude` is on your machine, the installer detects it and asks
 whether to register the carpenter skill (each app, one by one); you can also
@@ -50,23 +48,9 @@ register manually:
 carpenter register --app opencode      # or: claude-code
 ```
 
-<details>
-<summary><strong>Unstable channel (edge)</strong></summary>
-
-Prefer to soak the newest builds? The `edge` prerelease rolls on every merge
-into the `pre-release` branch:
-
-```sh
-curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh
-```
-
-Stay on it with `carpenter upgrade --channel edge`.
-</details>
-
 ## Learn more
 
-- [`DEV.md`](DEV.md) — building and contributing to carpenter.
-- [`docs/`](docs/) — full design, schema, and command contracts.
+- [DEV.md](DEV.md) — building and contributing to carpenter.
 - `carpenter howto` — the full command manual.
 
 ## License

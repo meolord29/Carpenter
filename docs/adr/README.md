@@ -23,4 +23,5 @@ sequence are retired decisions (not listed). Read topically; start with the inde
 | 017 | [017-concurrency-ords-slugs-exec.md](017-concurrency-ords-slugs-exec.md) | concurrency semantics: atomic+unique lesson ords, slug validation, per-course execution lock |
 | 018 | [018-upgrade-fetches-release.md](018-upgrade-fetches-release.md) | `upgrade` defaults to fetching a published release (checksum-verified) |
 | 019 | [019-uninstall-semantics.md](019-uninstall-semantics.md) | `uninstall`: best-effort skill removal, self-delete binary, keep config unless `--purge-config` |
-| 020 | [020-branch-governed-channels.md](020-branch-governed-channels.md) | branch-governed release channels: `pre-release`→`edge` canary, `release`→stable `vX.Y.Z` (Latest) |
+| 020 | [020-branch-governed-channels.md](020-branch-governed-channels.md) | branch-governed release channels: `pre-release`→`edge` canary, `release`→stable `vX.Y.Z` (Latest) — superseded by 021 |
+| 021 | [021-nightly-main-channels.md](021-nightly-main-channels.md) | nightly + main channels: owner-gated `nightly` trunk, frozen `main`, PR ground rules + dev-validate gate |

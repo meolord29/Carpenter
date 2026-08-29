@@ -3,10 +3,10 @@
 //! Two modes (adr/018): **release** (default — fetch a published tarball,
 //! verify its checksum, extract, probe, atomically replace) and **source**
 //! (`--source` or config `source_dir` — rebuild via `cargo xtask build
-//! --release`). Release mode picks its channel via `--channel stable|edge`
-//! (adr/020): `stable` (default) follows the Latest release published from the
-//! `release` branch; `edge` follows the rolling prerelease published from
-//! `pre-release`. Both modes refresh the skill of every **registered** app
+//! --release`). Release mode picks its channel via `--channel stable|nightly`
+//! (adr/021): `stable` (default) follows the Latest release published from
+//! `main`; `nightly` follows the rolling prerelease published from the
+//! `nightly` branch. Both modes refresh the skill of every **registered** app
 //! (installer parity — the confirming installer never registers a new app;
 //! adr/018 update). `--bin-dir`/`--no-skill` apply to both.
 
@@ -26,7 +26,7 @@ use crate::models::Data;
 const NOT_REGISTERED_WARNING: &str =
     "CLI not registered in any agent app — nothing to upgrade. Run `carpenter register`.";
 
-/// `upgrade [--channel stable|edge] [--source <p>] [--bin-dir <p>] [--no-skill]`.
+/// `upgrade [--channel stable|nightly] [--source <p>] [--bin-dir <p>] [--no-skill]`.
 pub fn upgrade(
     paths: &Paths,
     source: Option<&str>,
@@ -82,7 +82,7 @@ pub fn upgrade(
 
 /// Where this upgrade comes from: the published release or a source checkout.
 enum Mode {
-    /// GitHub `edge` tarball.
+    /// Published release tarball (channel-dependent).
     Release,
     /// Local source dir to rebuild.
     Source(PathBuf),
@@ -187,7 +187,7 @@ mod tests {
     #[test]
     fn upgrade_rejects_unknown_channel() {
         let paths = testutil::meta_setup();
-        let err = upgrade(&paths, None, None, true, "nightly").unwrap_err();
+        let err = upgrade(&paths, None, None, true, "edge").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)));
         let _ = std::fs::remove_dir_all(&paths.root);
     }
