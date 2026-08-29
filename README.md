@@ -18,7 +18,7 @@ the second you hit Run.
 - **Live progress.** Ask the agent how you're doing — it shows what's done and where
   you're stuck.
 
-> Experimental (`v0.7.1`) · Python/Jupyter · works with
+> Experimental (`v0.8.0`) · Python/Jupyter · works with
 > [opencode](https://opencode.ai) and claude code · Apache-2.0
 
 ## Try it
