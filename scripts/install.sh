@@ -1,12 +1,13 @@
 #!/bin/sh
-# carpenter installer — fetches the `edge` release binary for this platform.
+# carpenter installer — fetches the `nightly` release binary for this platform.
 #
-# End users:
-#   curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh
+# Devs/canary users:
+#   curl -LsSf https://github.com/meolord29/Carpenter/releases/download/nightly/install.sh | sh
 #
-# Channels (adr/020): this stock script follows `edge`; the stable release
+# Channels (adr/021): this stock script follows `nightly`; the stable release
 # attaches a tag-patched copy (TAG="vX.Y.Z"), and /releases/latest/download/
-# serves the newest stable one.
+# serves the newest stable one. End users get stable via the README one-liner;
+# nightly is the dev/canary path documented in DEV.md.
 #
 # Test overrides (used by local verification, harmless to ignore):
 #   CARPENTER_DOWNLOAD_BASE  base URL replacing the GitHub release dir
@@ -14,7 +15,7 @@
 set -eu
 
 REPO="meolord29/Carpenter"
-TAG="edge"
+TAG="nightly"
 BASE="${CARPENTER_DOWNLOAD_BASE:-https://github.com/${REPO}/releases/download/${TAG}}"
 INSTALL_DIR="${CARPENTER_INSTALL_DIR:-${HOME}/.local/bin}"
 

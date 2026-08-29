@@ -80,3 +80,9 @@ published from the `release` branch; `--channel edge` follows the rolling
 prerelease this ADR introduced. `edge` is no longer the default anywhere.
 The `edge` tag itself stopped rolling on every push to `main` — it now rolls on
 pushes to `pre-release`.
+
+## Update (2026-08-29, nightly)
+
+adr/021 renamed the canary: `--channel nightly` follows the rolling prerelease
+published from the `nightly` branch (`edge` is rejected); stable still follows
+**Latest**, now published by the nightly → main promotion merge.

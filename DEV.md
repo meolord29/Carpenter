@@ -37,24 +37,47 @@ The end-to-end authoring recipe lives in
   and request flow.
 - [docs/adr/](docs/adr/) — why the non-obvious decisions were made.
 
-## Releases (branch-governed channels)
+## Releases (nightly + stable main)
 
-Two channels, governed by two long-lived branches
-([adr/020](docs/adr/020-branch-governed-channels.md)):
+Two channels, two long-lived branches
+([adr/021](docs/adr/021-nightly-main-channels.md)):
 
 ```
-ivan/<topic> ──PR──▶ main          trunk; gates + PR smoke; publishes nothing
-main ──merge──▶ pre-release        rolls the `edge` prerelease (canary channel)
-pre-release ──merge──▶ release     publishes stable vX.Y.Z (marked Latest)
+ivan/<topic> ──PR──▶ nightly   integration trunk; ground-rules checklist + owner-only
+                               approval; each push rolls the `nightly` prerelease
+nightly ──PR──▶ main           promotion; publishes immutable stable vX.Y.Z (Latest);
+                               the only path into main (ci.yml `guard` enforces it)
 ```
 
-- **`edge` (unstable)** — a rolling prerelease that `release.yml` re-creates on
-  every push to `pre-release`. Canary users soak each build before promotion.
-- **stable (`vX.Y.Z`)** — immutable, versioned from `Cargo.toml`, published on
-  every push to `release`. GitHub marks it **Latest**, so the README one-liner
-  and `carpenter upgrade` (default `--channel stable`) follow it.
+- **`nightly` (unstable)** — the rolling prerelease `release.yml` re-creates on
+  every push to the `nightly` branch. Canary users soak each build before
+  promotion. Install / stay on it:
 
-**Promotion checklist** (pre-release → release PR):
+  ```sh
+  curl -LsSf https://github.com/meolord29/Carpenter/releases/download/nightly/install.sh | sh
+  carpenter upgrade --channel nightly
+  ```
+
+- **stable (`vX.Y.Z`)** — immutable, versioned from `Cargo.toml`, published when
+  `nightly` merges into `main`. GitHub marks it **Latest**, so the README
+  one-liner and `carpenter upgrade` (default `--channel stable`) follow it.
+  Users never see nightly — the README is end-user-only (install + getting
+  started; stable).
+
+**PR ground rules** (feature branches → `nightly`;
+[`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md), verified
+by the owner at review):
+
+1. All unit tests pass.
+2. New features ship with unit tests.
+3. If the CLI surface or study workflow changed, the QA agent's
+   checklist/prompt (`.opencode/agents/carpenter-dev-validate.md`) is updated
+   in the same PR.
+4. The PR explains what the feature does.
+5. A carpenter-dev-validate report is attached: the subject-learning
+   simulation ran smoothly over existing features and any new ones.
+
+**Promotion checklist** (nightly → main PR):
 1. Bump `version` in `Cargo.toml` (and `Cargo.lock`) in the promotion PR.
 2. Merge; CI tags `v<version>` and publishes stable; the smoke lanes verify the
    published artifact via the `/latest/` one-liner.
@@ -62,11 +85,23 @@ pre-release ──merge──▶ release     publishes stable vX.Y.Z (marked Lat
 **Rollback**: stable tags are immutable — install any previous `vX.Y.Z` by
 substituting its tag for `latest` in the install URL.
 
-`--channel edge` on `carpenter upgrade` (or the edge install one-liner) opts
-into the canary channel.
+**Branch protection** (`nightly` + `main`): require PRs, require review from
+codeowners (`CODEOWNERS` is `* @meolord29` — owner-only approval), require
+status checks (ci gates + smoke lanes; `main` additionally requires the
+`guard` job, which fails any PR into `main` whose head is not `nightly`).
+
+**One-time migration** (from the adr/020 model — run once, then delete this
+paragraph):
+1. `nightly` is created from `main` HEAD (bootstrap: `git push origin
+   main:nightly`). `pre-release` was content-identical to `main`, so nothing
+   unsoaked needed absorbing.
+2. The bootstrap PR (the adr/021 change itself) merges into `nightly` — the
+   first push rolls the `nightly` prerelease.
+3. Delete the `pre-release` and `release` branches and the `edge` release + tag.
+4. Apply the branch protection above to `nightly` and `main`.
 
 ## Contributing flow
 
-Trunk-based: short-lived `ivan/<topic>` branches off `main`, green CI, delete
-after merge. See
-[AGENTS.md § Trunk-based development](AGENTS.md#trunk-based-development).
+Short-lived `ivan/<topic>` branches off `nightly`, green CI, owner-approved
+merge (ground rules above), delete after merge. See
+[AGENTS.md § Integration & release](AGENTS.md#integration--release-adr021).

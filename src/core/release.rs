@@ -14,17 +14,17 @@ use crate::core::store::io_to_store;
 
 /// GitHub repo that hosts releases.
 pub const REPO: &str = "meolord29/Carpenter";
-/// The rolling prerelease tag the `pre-release` branch publishes (adr/020).
-pub const TAG: &str = "edge";
+/// The rolling prerelease tag the `nightly` branch publishes (adr/021).
+pub const TAG: &str = "nightly";
 
-/// Which published channel `upgrade` fetches (adr/020): stable is the default;
-/// `edge` is the opt-in canary channel.
+/// Which published channel `upgrade` fetches (adr/021): stable is the default;
+/// `nightly` is the opt-in canary channel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Channel {
     /// Latest stable release (`releases/latest/download`).
     Stable,
-    /// Rolling `edge` prerelease (`releases/download/edge`).
-    Edge,
+    /// Rolling `nightly` prerelease (`releases/download/nightly`).
+    Nightly,
 }
 
 impl Channel {
@@ -32,9 +32,9 @@ impl Channel {
     pub fn parse(s: &str) -> Result<Channel, CarpenterError> {
         match s {
             "stable" => Ok(Channel::Stable),
-            "edge" => Ok(Channel::Edge),
+            "nightly" => Ok(Channel::Nightly),
             other => Err(CarpenterError::ValidationError(format!(
-                "unknown channel {other:?} (stable|edge)"
+                "unknown channel {other:?} (stable|nightly)"
             ))),
         }
     }
@@ -43,7 +43,7 @@ impl Channel {
     pub fn base_url(self) -> String {
         match self {
             Channel::Stable => format!("https://github.com/{REPO}/releases/latest/download"),
-            Channel::Edge => format!("https://github.com/{REPO}/releases/download/{TAG}"),
+            Channel::Nightly => format!("https://github.com/{REPO}/releases/download/{TAG}"),
         }
     }
 }
@@ -240,21 +240,21 @@ mod tests {
     #[test]
     fn channel_parse_branches() {
         assert_eq!(Channel::parse("stable").unwrap(), Channel::Stable);
-        assert_eq!(Channel::parse("edge").unwrap(), Channel::Edge);
-        let err = Channel::parse("nightly").unwrap_err();
+        assert_eq!(Channel::parse("nightly").unwrap(), Channel::Nightly);
+        let err = Channel::parse("edge").unwrap_err();
         assert!(matches!(err, CarpenterError::ValidationError(_)), "{err}");
     }
 
     #[test]
     fn channel_base_urls_pin_the_contract() {
-        // stable follows GitHub's Latest pointer; edge pins the rolling tag
+        // stable follows GitHub's Latest pointer; nightly pins the rolling tag
         assert_eq!(
             Channel::Stable.base_url(),
             "https://github.com/meolord29/Carpenter/releases/latest/download"
         );
         assert_eq!(
-            Channel::Edge.base_url(),
-            "https://github.com/meolord29/Carpenter/releases/download/edge"
+            Channel::Nightly.base_url(),
+            "https://github.com/meolord29/Carpenter/releases/download/nightly"
         );
     }
 

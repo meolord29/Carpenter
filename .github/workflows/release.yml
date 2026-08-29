@@ -1,16 +1,17 @@
 name: release
 
-# Branch-governed channels (adr/020):
-#   push to pre-release → roll the rolling `edge` prerelease (the canary channel)
-#   push to release     → publish versioned stable vX.Y.Z from Cargo.toml
-#                          (marked Latest — installs/upgrade default to it)
-# PRs against main build + smoke against PR-local file:// artifacts only —
-# a PR can never publish. Merges to main publish nothing.
+# Branch-governed channels (adr/021):
+#   push to nightly → roll the rolling `nightly` prerelease (the canary channel)
+#   push to main    → publish versioned stable vX.Y.Z from Cargo.toml
+#                     (marked Latest — installs/upgrade default to it)
+# PRs against nightly/main build + smoke against PR-local file:// artifacts
+# only — a PR can never publish. Only the nightly branch may merge into main
+# (ci.yml's guard job enforces that).
 on:
   push:
-    branches: [pre-release, release]
+    branches: [nightly, main]
   pull_request:
-    branches: [main]
+    branches: [nightly, main]
   workflow_dispatch:
 
 permissions:
@@ -72,37 +73,37 @@ jobs:
         run: |
           set -eu
           case "${GITHUB_REF_NAME}" in
-            pre-release)
-              echo "tag=edge" >> "$GITHUB_OUTPUT"
+            nightly)
+              echo "tag=nightly" >> "$GITHUB_OUTPUT"
               echo "prerelease=true" >> "$GITHUB_OUTPUT"
               ;;
-            release)
+            main)
               version=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n1)
               echo "tag=v${version}" >> "$GITHUB_OUTPUT"
               echo "prerelease=false" >> "$GITHUB_OUTPUT"
-              # stable's installer must fetch THIS release, never edge: patch the
-              # tag in the copy we attach (the repo file stays edge-default).
-              sed -i "s/^TAG=\"edge\"$/TAG=\"v${version}\"/" scripts/install.sh
+              # stable's installer must fetch THIS release, never nightly: patch
+              # the tag in the copy we attach (the repo file stays nightly-default).
+              sed -i "s/^TAG=\"nightly\"$/TAG=\"v${version}\"/" scripts/install.sh
               ;;
             *) echo "unexpected ref ${GITHUB_REF_NAME}" >&2; exit 1 ;;
           esac
-      - name: roll edge release
-        if: steps.ch.outputs.tag == 'edge'
+      - name: roll nightly release
+        if: steps.ch.outputs.tag == 'nightly'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete edge --cleanup-tag --yes || true
-          gh release create edge dist/carpenter-*.tar.gz dist/SHA256SUMS scripts/install.sh \
+          gh release delete nightly --cleanup-tag --yes || true
+          gh release create nightly dist/carpenter-*.tar.gz dist/SHA256SUMS scripts/install.sh \
             --prerelease \
             --target "$GITHUB_SHA" \
-            --title "carpenter edge (${GITHUB_SHA::7})" \
-            --notes "Rolling prerelease (canary) from the pre-release branch.
+            --title "carpenter nightly (${GITHUB_SHA::7})" \
+            --notes "Rolling prerelease (canary) from the nightly branch.
 
-          Unstable by design — prefer the stable install in the README. Install (Linux x86_64, macOS Apple Silicon):
+          Unstable by design — the README serves stable only. Install (Linux x86_64, macOS Apple Silicon):
 
-              curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh"
+              curl -LsSf https://github.com/meolord29/Carpenter/releases/download/nightly/install.sh | sh"
       - name: publish stable release
-        if: steps.ch.outputs.tag != 'edge'
+        if: steps.ch.outputs.tag != 'nightly'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.ch.outputs.tag }}
@@ -110,7 +111,7 @@ jobs:
           gh release create "$TAG" dist/carpenter-*.tar.gz dist/SHA256SUMS scripts/install.sh \
             --target "$GITHUB_SHA" \
             --title "carpenter ${TAG}" \
-            --notes "Stable release promoted from pre-release (adr/020).
+            --notes "Stable release promoted from nightly (adr/021).
 
           Install (Linux x86_64, macOS Apple Silicon):
 
@@ -122,9 +123,9 @@ jobs:
   # installer pipeline — tarball, checksum, install.sh, register — on a clean
   # runner, not just the repo tests (which run against a local file://
   # fixture). Triple-mode:
-  #   - push/pre-release: the PUBLISHED edge artifact via the literal edge
+  #   - push/nightly: the PUBLISHED nightly artifact via the literal nightly
   #     one-liner (post-publish proof of the release pipeline)
-  #   - push/release: the PUBLISHED stable artifact via the /latest/ one-liner
+  #   - push/main: the PUBLISHED stable artifact via the /latest/ one-liner
   #   - PR: this PR's build artifacts via CARPENTER_DOWNLOAD_BASE=file:// —
   #     the same lanes run pre-merge, so smoke is a required check
   # A REAL opencode is installed first (curl installer on Linux, curl + brew
@@ -190,8 +191,8 @@ jobs:
         run: |
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             CARPENTER_DOWNLOAD_BASE="file://${GITHUB_WORKSPACE}/dist" sh scripts/install.sh
-          elif [ "$GITHUB_REF_NAME" = "pre-release" ]; then
-            curl -LsSf https://github.com/meolord29/Carpenter/releases/download/edge/install.sh | sh
+          elif [ "$GITHUB_REF_NAME" = "nightly" ]; then
+            curl -LsSf https://github.com/meolord29/Carpenter/releases/download/nightly/install.sh | sh
           else
             curl -LsSf https://github.com/meolord29/Carpenter/releases/latest/download/install.sh | sh
           fi

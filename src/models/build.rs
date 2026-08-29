@@ -36,8 +36,8 @@ pub mod examples {
                 },
             ),
             (
-                "upgrade [--channel stable|edge] [--source <p>] [--bin-dir <p>] [--no-skill]",
-                "no flag → latest **stable** release; `--channel edge` → rolling prerelease; `--source` → config `source_dir` → local build",
+                "upgrade [--channel stable|nightly] [--source <p>] [--bin-dir <p>] [--no-skill]",
+                "no flag → latest **stable** release; `--channel nightly` → rolling prerelease; `--source` → config `source_dir` → local build",
                 "`skill` = per-app refresh outcomes (one per registered app): `[{\"refreshed\":true,\"app\":\"opencode\",…},{\"refreshed\":true,\"app\":\"claude-code\",…}]` · nothing registered ⇒ `{refreshed:false,reason:\"not_registered\",warning:\"…\"}` · `--no-skill` ⇒ `skill:null`",
                 Data::Upgrade {
                     upgraded: true,

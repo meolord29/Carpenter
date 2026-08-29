@@ -1355,7 +1355,7 @@ Default bin dir from config (`bin_dir` → ~/.local/bin).
 
 Replace the installed binary from a published release (or a source checkout) and refresh the skill.
 
-- `--channel <CHANNEL>` — Release channel to fetch (stable|edge).
+- `--channel <CHANNEL>` — Release channel to fetch (stable|nightly).
 - `--source <PATH>` — Source checkout (default: config source_dir).
 - `--bin-dir <PATH>` — Install target (default: config bin_dir).
 - `--no-skill` — Skip the skill auto-refresh (skill:null).
@@ -1374,7 +1374,7 @@ Result (one envelope on stdout):
 Fetches the latest **stable** release (checksum-verified), replaces the binary, and
 refreshes the skill of every **registered** app (`skill` = one outcome per app;
 nothing registered ⇒ `{"refreshed":false,"reason":"not_registered",…}`).
-`--channel edge` follows the rolling prerelease instead; `--source <path>` (or
+`--channel nightly` follows the rolling prerelease instead; `--source <path>` (or
 config `source_dir`) rebuilds from a local checkout. `--no-skill` skips the
 skill write (`skill:null`).
 
