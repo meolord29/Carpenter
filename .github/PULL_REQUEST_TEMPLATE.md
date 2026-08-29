@@ -14,15 +14,21 @@
 - [ ] If the CLI surface or study workflow changed:
       `.opencode/agents/carpenter-dev-validate.md` (the QA agent's
       checklist/prompt) is updated to match in this PR.
-- [ ] A **carpenter-dev-validate report** is attached below: the
-      subject-learning simulation ran smoothly end to end — existing features
-      verified **and** the new/changed ones (if any) verified.
+- [ ] A **carpenter-dev-validate report** is attached below — **required when
+      this PR changes learner-facing or course-building surface** (commands,
+      envelope shapes, study workflow, howto contract): the subject-learning
+      simulation ran smoothly end to end, verifying existing features **and**
+      the new/changed ones. Infra/docs/release-process-only PRs: tick with a
+      one-line `N/A — no course-surface change` plus the targeted contract
+      validation that ran instead.
 
 ### dev-validate report
 
-<!-- Paste the report (or its summary): commands audited, failure tally
-     (must show zero bugs), and the confirmation that simulating learning the
-     subject succeeded smoothly. Run the agent with the PR branch checked out. -->
+<!-- Required for course-surface PRs: paste the report (or its summary) —
+      commands audited, failure tally (must show zero bugs), and the
+      confirmation that simulating learning the subject succeeded smoothly.
+      Run the agent with the PR branch checked out. Otherwise: one line
+      explaining the N/A + what contract validation covered the change. -->
 
 ---
 

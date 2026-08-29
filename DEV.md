@@ -74,8 +74,11 @@ by the owner at review):
    checklist/prompt (`.opencode/agents/carpenter-dev-validate.md`) is updated
    in the same PR.
 4. The PR explains what the feature does.
-5. A carpenter-dev-validate report is attached: the subject-learning
-   simulation ran smoothly over existing features and any new ones.
+5. A carpenter-dev-validate report is attached when the PR changes
+   learner-facing or course-building surface — the learning simulation ran
+   smoothly over existing features and any new ones. Infra/docs/release-process
+   PRs record an `N/A — no course-surface change` with the targeted contract
+   validation that ran instead.
 
 **Promotion checklist** (nightly → main PR):
 1. Bump `version` in `Cargo.toml` (and `Cargo.lock`) in the promotion PR.
@@ -89,16 +92,6 @@ substituting its tag for `latest` in the install URL.
 codeowners (`CODEOWNERS` is `* @meolord29` — owner-only approval), require
 status checks (ci gates + smoke lanes; `main` additionally requires the
 `guard` job, which fails any PR into `main` whose head is not `nightly`).
-
-**One-time migration** (from the adr/020 model — run once, then delete this
-paragraph):
-1. `nightly` is created from `main` HEAD (bootstrap: `git push origin
-   main:nightly`). `pre-release` was content-identical to `main`, so nothing
-   unsoaked needed absorbing.
-2. The bootstrap PR (the adr/021 change itself) merges into `nightly` — the
-   first push rolls the `nightly` prerelease.
-3. Delete the `pre-release` and `release` branches and the `edge` release + tag.
-4. Apply the branch protection above to `nightly` and `main`.
 
 ## Contributing flow
 
