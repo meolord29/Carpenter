@@ -137,7 +137,9 @@ and refreshes registered apps' skills; `--channel nightly` opts into the canary
 `nightly` is the integration trunk: always green; every push rolls the rolling
 `nightly` prerelease. `main` is the frozen release branch — stable `vX.Y.Z`
 publishes only from a `nightly → main` promotion PR, and the `guard` check
-rejects every other PR into `main`.
+rejects every other PR into `main`. Bootstrap: `nightly` was cut from `main`
+HEAD when the model landed (adr/021's PR merged into `nightly`, rolling the
+first prerelease).
 - **Short-lived branches only**: `ivan/<topic>`, target ≤1 day of work, one
   concern per branch. No long-lived branches — unfinished work lands dark
   behind the `dev` feature flag (adr/016) instead of aging on a branch. The one
