@@ -36,6 +36,6 @@ pins stable; `uv` is installed (`astral-sh/setup-uv`) so
 helper validity) `return` on spawn failure and no-op, not fail, where `python3`
 is absent. `release.yml` additionally smoke-tests each **published** artifact via the real
 `curl | sh` one-liner on both lanes (black-box: version, howto, register,
-uninstall): the `edge` prerelease on `pre-release` pushes, the Latest stable on
-`release` pushes (adr/020); PRs run the same lanes against `file://` PR builds
+uninstall): the `nightly` prerelease on `nightly` pushes, the Latest stable on
+`main` pushes (adr/021); PRs run the same lanes against `file://` PR builds
 pre-merge.

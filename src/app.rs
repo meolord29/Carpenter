@@ -72,7 +72,7 @@ pub fn cli() -> Command {
                         .long("channel")
                         .value_name("CHANNEL")
                         .default_value("stable")
-                        .help("Release channel to fetch (stable|edge)."),
+                        .help("Release channel to fetch (stable|nightly)."),
                 )
                 .arg(
                     Arg::new("source")

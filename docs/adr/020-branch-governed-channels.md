@@ -1,6 +1,6 @@
 # ADR-020: branch-governed release channels
 
-Date: 2026-08-27 · Status: Accepted
+Date: 2026-08-27 · Status: Superseded by [adr/021](021-nightly-main-channels.md)
 
 ## Context
 

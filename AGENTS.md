@@ -112,13 +112,14 @@ CI (`.github/workflows/ci.yml`) mirrors these gates on an
 [design/17](docs/design/17-cross-platform.md),
 [adr/012](docs/adr/012-cross-platform-paths.md)) — `rust-toolchain.toml`
 pins stable and `uv` is installed. Releases (`.github/workflows/release.yml`)
-are branch-governed channels ([adr/020](docs/adr/020-branch-governed-channels.md)):
-merges to `main` publish nothing; a merge `main → pre-release` rolls the `edge`
-prerelease (canary), and a merge `pre-release → release` publishes an immutable
-stable `vX.Y.Z` (version bumped in the promotion PR; marked Latest). Each
+are branch-governed channels ([adr/021](docs/adr/021-nightly-main-channels.md)):
+feature PRs target `nightly`; every push to `nightly` rolls the rolling
+`nightly` prerelease (canary), and a `nightly → main` promotion publishes an
+immutable stable `vX.Y.Z` (version bumped in the promotion PR; marked Latest).
+ci.yml's `guard` job fails any PR into `main` whose head is not `nightly`. Each
 publish ships `x86_64-unknown-linux-musl` + `aarch64-apple-darwin` tarballs,
 `SHA256SUMS`, and a channel-correct `scripts/install.sh` (stable's is
-tag-patched so it can never fetch edge bits; the `curl | sh` one-liner
+tag-patched so it can never fetch nightly bits; the `curl | sh` one-liner
 auto-registers into detected agent apps; Intel Mac users build from source) —
 then a **smoke job** verifies the published artifact through the real one-liner
 (version, howto, register, uninstall) against a **real opencode** (curl
@@ -129,24 +130,33 @@ same smoke lanes run **pre-merge on PRs** against PR-built artifacts
 (`CARPENTER_DOWNLOAD_BASE=file://`), and the release job is push-only — so a PR
 can never publish nor merge with red smoke. `carpenter upgrade` (no flags)
 fetches the Latest stable release — checksum-verified via the same pipeline —
-and refreshes registered apps' skills; `--channel edge` opts into the canary
-(adr/018, adr/020).
+and refreshes registered apps' skills; `--channel nightly` opts into the canary
+(adr/018, adr/021).
 
-## Trunk-based development
-`main` is the trunk: always green, always shippable (merges publish nothing;
-channels cut separately — adr/020).
+## Integration & release (adr/021)
+`nightly` is the integration trunk: always green; every push rolls the rolling
+`nightly` prerelease. `main` is the frozen release branch — stable `vX.Y.Z`
+publishes only from a `nightly → main` promotion PR, and the `guard` check
+rejects every other PR into `main`.
 - **Short-lived branches only**: `ivan/<topic>`, target ≤1 day of work, one
   concern per branch. No long-lived branches — unfinished work lands dark
-  behind the `dev` feature flag (adr/016) instead of aging on a branch. The
-  sanctioned exceptions are the two **channel branches** (`pre-release`,
-  `release`), which exist to cut releases, not to develop on.
+  behind the `dev` feature flag (adr/016) instead of aging on a branch. The one
+  sanctioned exception is the **channel branch** `nightly`, which exists to cut
+  releases, not to develop on.
+- **PR ground rules** (into `nightly`;
+  `.github/PULL_REQUEST_TEMPLATE.md`): unit tests green; new features ship with
+  unit tests; `.opencode/agents/carpenter-dev-validate.md` updated when the CLI
+  surface/study workflow moves; the PR explains the feature; a
+  carpenter-dev-validate report (learning simulation smooth over existing +
+  new features) is attached. `CODEOWNERS` (`* @meolord29`) + branch protection
+  make every nightly merge owner-approved.
 - **Merge green or don't merge**: ci.yml must pass on the branch head; rebase
-  onto `main` before merging if it has moved. Delete the branch after merge.
-- **Branch protection** on `main` enforces the checks — gates, build, and the
-  smoke lanes — for everyone including the owner; approvals can't be bypassed
-  silently (the owner bypasses the review rule only, never the checks; direct
-  pushes reserved for generated-surface fixes like `howto.gen.md`/spec-table
-  drift).
+  onto `nightly` before merging if it has moved. Delete the branch after merge.
+- **Branch protection** on `nightly` + `main` enforces the checks — gates,
+  build, and the smoke lanes — for everyone including the owner; approvals
+  can't be bypassed silently (the owner bypasses the review rule only, never
+  the checks; direct pushes reserved for generated-surface fixes like
+  `howto.gen.md`/spec-table drift).
 
 ## Dev authoring loop (`--dev`)
 Two build stages ([design/19](docs/design/19-dev-build.md),

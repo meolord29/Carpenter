@@ -12,6 +12,6 @@ Result (one envelope on stdout):
 Fetches the latest **stable** release (checksum-verified), replaces the binary, and
 refreshes the skill of every **registered** app (`skill` = one outcome per app;
 nothing registered ⇒ `{"refreshed":false,"reason":"not_registered",…}`).
-`--channel edge` follows the rolling prerelease instead; `--source <path>` (or
+`--channel nightly` follows the rolling prerelease instead; `--source <path>` (or
 config `source_dir`) rebuilds from a local checkout. `--no-skill` skips the
 skill write (`skill:null`).
