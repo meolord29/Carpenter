@@ -9,7 +9,7 @@ that gets 80% of the value from my marketing data."
 Approve its outline, then fill in the notebook exercises and hit Run for an
 instant grade.
 
-Carpenter tracks your weak spots, and the agent drills them with fresh
+Carpenter tracks your weak spots, andmake the the agent drills them with fresh
 exercises until they clear.
 
 > `v0.8.0` · Linux/macOS · works with
@@ -17,13 +17,25 @@ exercises until they clear.
 
 ## Where it fits
 
-- **Online course platforms** decide the curriculum and pad it with material
-  you didn't ask for. Here, the course contains only what your goal needs.
-- **Public notebook repos** (GitHub/Kaggle-style) are reading material —
-  unstructured, and nobody grades your code. This gives ordered lessons with
-  graded exercises.
-- **Paper-explainer AI tutors** explain papers. This teaches the other half:
-  writing code for your own data problems.
+```text
+                               structured & graded
+                                        │
+                                        │
+     online course platforms            │     carpenter
+     (fixed curriculum, padded          │     (course built around
+      with fluff)                       │      your goal, graded)
+                                        │
+                                        │
+one-size-fits-all ──────────────────────┼────────────────────── built for your problem
+                                        │
+                                        │
+     notebook repos, docs,              │     chat LLMs, paper-explainer
+     YouTube tutorials                  │     AI tutors (advice only,
+     (read, nothing graded)             │      nothing graded)
+                                        │
+                                        │
+                            unstructured, no feedback
+```
 
 No app, no web UI, no bundled course library — it needs an AI coding agent.
 
