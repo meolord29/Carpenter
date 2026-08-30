@@ -15,14 +15,6 @@ exercises until they clear.
 > Experimental (`v0.8.0`) · Linux/macOS · works with
 > [opencode](https://opencode.ai) and claude code · Apache-2.0
 
-## How it works
-
-1. Describe to your agent what you want to learn.
-2. Approve the course outline it drafts.
-3. Fill in the practice exercises in a Jupyter notebook and hit **Run**.
-4. Get **PASS / FAIL** instantly — failing spots come back as new practice
-   until they clear.
-
 ## Where it fits
 
 - **Online course platforms** decide the curriculum and pad it with material
