@@ -29,9 +29,9 @@ exercises until they clear.
 one-size-fits-all ──────────────────────┼──────────────────── built for your problem
                                         │
                                         │
-     ● notebook repos, docs, YouTube    │
+     ● notebook repos, docs, YouTube    │                  ● chat LLMs
                                         │      ● paper-explainer AI tutors
-                                        │                  ● chat LLMs
+                                        │
                                         │
                                         │
                             unstructured, no feedback
