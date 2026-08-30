@@ -162,11 +162,17 @@ into `nightly`, rolling the first prerelease).
   make every nightly merge owner-approved.
 - **Merge green or don't merge**: ci.yml must pass on the branch head; rebase
   onto `nightly` before merging if it has moved. Delete the branch after merge.
-- **Branch protection** on `nightly` + `main` enforces the checks — gates,
-  build, and the smoke lanes — for everyone including the owner; approvals
-  can't be bypassed silently (the owner bypasses the review rule only, never
-  the checks; direct pushes reserved for generated-surface fixes like
-  `howto.gen.md`/spec-table drift).
+- **Branch protection** ([adr/023](docs/adr/023-ruleset-bypass-actors.md) —
+  rulesets-only, API-managed; no classic branch protection): `nightly` +
+  `main` each require a PR, code-owner review, and the checks (gates, build,
+  smoke lanes; strict/up-to-date), forbid force-pushes and deletions; `main`
+  additionally requires the `guard` job (only `nightly` merges into it).
+  Bypass actors: the owner (`always` — so "green before merge" is policy,
+  not mechanism; direct pushes stay reserved for generated-surface fixes
+  like `howto.gen.md`/spec-table drift), `github-actions[bot]` (ladder
+  pushes), and the release-bot App (promote-bump). Nobody else can push or
+  merge either trunk. Don't re-save the nightly ruleset in the GitHub UI —
+  it would drop the bot bypass actor (adr/023).
 
 ## Dev authoring loop (`--dev`)
 Two build stages ([design/19](docs/design/19-dev-build.md),
