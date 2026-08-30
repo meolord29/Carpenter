@@ -176,8 +176,17 @@ jobs:
           esac
       - name: install opencode (script)
         if: matrix.opencode_install == 'script'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl -fsSL https://opencode.ai/install | bash -s -- --no-modify-path
+          # Resolve latest via an authenticated call and pass --version: the
+          # installer's unpinned path hits api.github.com anonymously, which is
+          # rate-limited (60/hr per shared runner IP) and fails the smoke lane.
+          ver="$(gh api repos/anomalyco/opencode/releases/latest --jq '.tag_name')"
+          ver="${ver#v}"
+          [ -n "$ver" ] || { echo "::error::failed to resolve latest opencode version"; exit 1; }
+          echo "installing opencode v${ver}"
+          curl -fsSL https://opencode.ai/install | bash -s -- --no-modify-path --version "$ver"
           export PATH="$HOME/.opencode/bin:$PATH"
           command -v opencode
           opencode --version
