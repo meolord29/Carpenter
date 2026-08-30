@@ -19,9 +19,9 @@ exercises until they clear.
 
 ```text
                                structured & graded
+                                        │                     ★ carpenter
                                         │
-                                        │
-     ● online course platforms          │       ★ carpenter
+     ● online course platforms          │
                                         │
                                         │
                                         │
