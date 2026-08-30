@@ -72,4 +72,11 @@ nightly ──PR──▶ main           promotion; publishes immutable stable v
   test something other than what the report requires.
 - **Keeping `edge` as an alias** — two names for one channel; no clarity gain.
 
+## Update (2026-08-30, adr/022)
+
+Versioning is now automated: every nightly merge bumps a patch, every
+promotion bumps a minor (a release-bot GitHub App lands it on PR open, the
+guard enforces it), and a recut job fast-forwards `nightly` to the promotion
+merge. See [adr/022](022-automated-version-ladder.md).
+
 Supersedes [adr/020](020-branch-governed-channels.md).
