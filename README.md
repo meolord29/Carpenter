@@ -5,15 +5,13 @@ A tool your AI coding agent uses to build and grade Python practice courses.
 <p align="center"><img src="assets/logo.png" alt="carpenter logo" width="360"></p>
 
 Tell the agent what you want to learn — ideally a real problem, like "I have
-marketing data but don't know the math and statistics to draw insights from
-it — teach me the 20% that gets me 80% of the value". The agent drafts a
-course; you approve it; you practice in a normal Jupyter notebook. Hit Run
-and carpenter grades your code instantly — a pass is a real pass, not the AI
-being agreeable.
+marketing data; teach me the 20% of math and statistics that draws 80% of the
+value" — and approve the course it drafts. Then practice in a normal Jupyter
+notebook: hit Run and carpenter grades your code instantly — a pass is a real
+pass, not the AI being agreeable.
 
 carpenter tracks your weak spots, and the agent drills them with fresh
-exercises until they clear. No special environment, no custom tooling — just
-you, a notebook, and Python.
+exercises until they clear.
 
 > Experimental (`v0.8.0`) · Linux/macOS · works with
 > [opencode](https://opencode.ai) and claude code · Apache-2.0
