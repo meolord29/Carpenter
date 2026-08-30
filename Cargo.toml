@@ -1,9 +1,9 @@
 [package]
 name = "carpenter"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2021"
 description = "Agent-driven CLI that builds Python/Jupyter learning material."
-license = "Apache-2.0"
+license = "BSD-3-Clause"
 
 [features]
 # Relaxes the doc/example/scenario gates (adr/016) for the authoring loop.
