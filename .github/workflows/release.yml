@@ -85,7 +85,10 @@ jobs:
           git commit -m "chore(release): bump to ${version}"
           pushed=0
           for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin nightly && git push origin HEAD:nightly; then
+            # fully-qualified refspecs: the repo has both a nightly branch and
+            # a nightly release tag — a bare `nightly` dst is ambiguous and
+            # git refuses the push.
+            if git pull --rebase origin refs/heads/nightly && git push origin HEAD:refs/heads/nightly; then
               pushed=1
               break
             fi
@@ -195,7 +198,7 @@ jobs:
           git add -A
           version=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n1)
           git commit -m "chore(release): bump to ${version}"
-          git push "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:nightly
+          git push "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/nightly
 
   # Publish only on channel pushes (never from a PR); smoke still runs on PRs
   # against PR-built artifacts.
