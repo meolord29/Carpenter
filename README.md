@@ -10,7 +10,7 @@ value" — and approve the course it drafts. Then practice in a normal Jupyter
 notebook: hit Run and carpenter grades your code instantly — a pass is a real
 pass, not the AI being agreeable.
 
-carpenter tracks your weak spots, and the agent drills them with fresh
+Carpenter tracks your weak spots, and the agent drills them with fresh
 exercises until they clear.
 
 > Experimental (`v0.8.0`) · Linux/macOS · works with
