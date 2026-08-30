@@ -15,7 +15,7 @@ exercises until they clear.
 > `v0.8.0` · Linux/macOS · works with
 > [opencode](https://opencode.ai) and claude code · Apache-2.0
 
-## Where it fits
+## Market fit
 
 ```text
                                structured & graded
