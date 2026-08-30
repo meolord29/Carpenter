@@ -136,10 +136,13 @@ Prerequisite (one-time, owner): the release-bot GitHub App + the
 **Rollback**: stable tags are immutable — install any previous `vX.Y.Z` by
 substituting its tag for `latest` in the install URL.
 
-**Branch protection** (`nightly` + `main`): require PRs, require review from
-codeowners (`CODEOWNERS` is `* @meolord29` — owner-only approval), require
-status checks (ci gates + smoke lanes; `main` additionally requires the
-`guard` job, which fails any PR into `main` whose head is not `nightly`).
+**Branch protection** ([adr/023](adr/023-ruleset-bypass-actors.md); rulesets
+only, API-managed): `nightly` + `main` require PRs, review from codeowners
+(`CODEOWNERS` is `* @meolord29` — owner-only approval), and status checks
+(ci gates + smoke lanes, strict; `main` additionally requires the `guard`
+job, which fails any PR into `main` whose head is not `nightly`). Bypass
+actors: the owner, `github-actions[bot]` (ladder pushes), and the
+release-bot App — nobody else can push or merge either trunk.
 
 ### Contributing flow
 
