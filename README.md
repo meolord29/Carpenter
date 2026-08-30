@@ -12,7 +12,7 @@ instant grade.
 Carpenter tracks your weak spots, and the agent drills them with fresh
 exercises until they clear.
 
-> Experimental (`v0.8.0`) · Linux/macOS · works with
+> `v0.8.0` · Linux/macOS · works with
 > [opencode](https://opencode.ai) and claude code · Apache-2.0
 
 ## Where it fits
@@ -25,8 +25,7 @@ exercises until they clear.
 - **Paper-explainer AI tutors** explain papers. This teaches the other half:
   writing code for your own data problems.
 
-No app, no web UI, no bundled course library — it needs an AI coding agent,
-and it's experimental software.
+No app, no web UI, no bundled course library — it needs an AI coding agent.
 
 ## Install
 
