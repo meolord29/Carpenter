@@ -21,17 +21,17 @@ exercises until they clear.
                                structured & graded
                                         │
                                         │
-     online course platforms            │     carpenter
-     (fixed curriculum, padded          │     (course built around
-      with fluff)                       │      your goal, graded)
+     ● online course platforms          │       ★ carpenter
                                         │
                                         │
-one-size-fits-all ──────────────────────┼────────────────────── built for your problem
                                         │
                                         │
-     notebook repos, docs,              │     chat LLMs, paper-explainer
-     YouTube tutorials                  │     AI tutors (advice only,
-     (read, nothing graded)             │      nothing graded)
+one-size-fits-all ──────────────────────┼──────────────────── built for your problem
+                                        │
+                                        │
+     ● notebook repos, docs, YouTube    │
+                                        │      ● paper-explainer AI tutors
+                                        │                  ● chat LLMs
                                         │
                                         │
                             unstructured, no feedback
