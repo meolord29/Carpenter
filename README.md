@@ -1,33 +1,43 @@
 # carpenter
 
-**Your AI agent builds the course. You practice. carpenter grades — instantly.**
-
-Stop hunting for the perfect tutorial. Tell your agent what you want to learn,
-approve the outline it drafts, and start practicing on a notebook that grades you
-the second you hit Run.
+A tool your AI coding agent uses to build and grade Python practice courses.
 
 <p align="center"><img src="assets/logo.png" alt="carpenter logo" width="360"></p>
 
-## Why it clicks
+Tell the agent what you want to learn, like "teach me the 20% of statistics
+that gets 80% of the value from my marketing data."
+Approve its outline, then fill in the notebook exercises and hit Run for an
+instant grade.
 
-- **Built for you, not pre-baked.** Say what you want to learn → your agent drafts
-  the lessons, the practice problems, and the quizzes.
-- **Grading you can trust.** The agent teaches, but carpenter scores — so a pass is
-  a real pass, not the AI being nice to you.
-- **You stay in control.** Nothing gets built until you approve the outline.
-- **Live progress.** Ask the agent how you're doing — it shows what's done and where
-  you're stuck.
+Carpenter tracks your weak spots, andmake the the agent drills them with fresh
+exercises until they clear.
 
-> Experimental (`v0.8.0`) · Python/Jupyter · works with
+> `v0.8.0` · Linux/macOS · works with
 > [opencode](https://opencode.ai) and claude code · Apache-2.0
 
-## Try it
+## Market fit
 
-1. [Install](#install) carpenter (one-time).
-2. Open opencode. Tell the agent what you want to learn.
-3. Approve the outline, fill in a practice stub, hit **Run** → **PASS / FAIL**.
+```text
+                               structured & graded
+                                        │                     ★ carpenter
+                                        │
+     ● online course platforms          │
+                                        │
+                                        │
+                                        │
+                                        │
+one-size-fits-all ──────────────────────┼──────────────────── built for your problem
+                                        │
+                                        │
+     ● notebook repos, docs, YouTube    │                  ● chat LLMs
+                                        │      ● paper-explainer AI tutors
+                                        │
+                                        │
+                                        │
+                            unstructured, no feedback
+```
 
-That's the whole loop. You never touch the CLI — the agent does.
+No app, no web UI, no bundled course library — it needs an AI coding agent.
 
 ## Install
 
@@ -48,10 +58,11 @@ register manually:
 carpenter register --app opencode      # or: claude-code
 ```
 
-## Learn more
+## Contributing
 
-- [DEV.md](DEV.md) — building and contributing to carpenter.
-- `carpenter howto` — the full command manual.
+Everything for working on carpenter — docs map, dev loop, release channels —
+lives in [docs/README.md](docs/README.md). `carpenter howto` prints the full
+command manual.
 
 ## License
 

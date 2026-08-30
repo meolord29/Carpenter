@@ -47,7 +47,7 @@ nightly ──PR──▶ main           promotion; publishes immutable stable v
   LLM-driven, so CI cannot run it honestly; the owner's review is the
   enforcement.
 - The README is end-user-only (stable install + getting started, no channel
-  talk); the nightly install path lives in DEV.md. `upgrade` renames
+  talk); the nightly install path lives in docs/README.md. `upgrade` renames
   `--channel edge` → `--channel nightly` (`core/release.rs::Channel`); `edge`
   is rejected.
 
