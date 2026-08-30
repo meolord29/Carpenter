@@ -13,7 +13,7 @@ Carpenter tracks your weak spots, andmake the the agent drills them with fresh
 exercises until they clear.
 
 > `v0.8.0` · Linux/macOS · works with
-> [opencode](https://opencode.ai) and claude code · Apache-2.0
+> [opencode](https://opencode.ai) and claude code · BSD-3-Clause
 
 ## Market fit
 
@@ -66,4 +66,4 @@ command manual.
 
 ## License
 
-Apache 2.0. See [`LICENSE`](LICENSE).
+BSD 3-Clause. See [`LICENSE`](LICENSE).
