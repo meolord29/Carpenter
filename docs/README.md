@@ -137,12 +137,12 @@ Prerequisite (one-time, owner): the release-bot GitHub App + the
 substituting its tag for `latest` in the install URL.
 
 **Branch protection** ([adr/023](adr/023-ruleset-bypass-actors.md); rulesets
-only, API-managed): `nightly` + `main` require PRs, review from codeowners
+only): `nightly` + `main` require PRs, review from codeowners
 (`CODEOWNERS` is `* @meolord29` — owner-only approval), and status checks
 (ci gates + smoke lanes, strict; `main` additionally requires the `guard`
 job, which fails any PR into `main` whose head is not `nightly`). Bypass
-actors: the owner, `github-actions[bot]` (ladder pushes), and the
-release-bot App — nobody else can push or merge either trunk.
+actors: the owner and the release-bot App (all ladder pushes: bump,
+promote-bump, recut) — nobody else can push or merge either trunk.
 
 ### Contributing flow
 

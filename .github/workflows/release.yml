@@ -22,19 +22,30 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  # bot-pushed bump heads land while the pushing run is still building it —
+  # that cascade run (all jobs suppressed by the bump job's `if`) must never
+  # cancel the mainline run, so ladder pushes get their own group.
+  group: release-${{ github.ref }}-${{ github.triggering_actor.login == 'carpenter-release-bot[bot]' && 'bot' || 'mainline' }}
   cancel-in-progress: true
 
 jobs:
   # Patch ladder (adr/022). Runs first on every nightly push: bumps the
   # version, regenerates every derived surface, pushes `chore(release): bump
   # to X.Y.Z` — then build/release consume the bumped sha so the nightly
-  # artifact REPORTS the new version. The push uses GITHUB_TOKEN on purpose:
-  # token-made pushes never trigger workflows, so no cascade (the build rides
-  # this same run). No-ops (resolve sha = github.sha) on PRs and main pushes,
+  # artifact REPORTS the new version. The push uses the release-bot App
+  # token: ruleset branch protection (adr/023) declines GITHUB_TOKEN pushes
+  # (user-owned repos can't bypass the Actions integration), and the App is
+  # a bypass actor. App pushes DO fire workflows — the job-level `if` below
+  # suppresses that cascade run (a bot-pushed bump head was already built by
+  # the run that pushed it; build/release/smoke depend on this job and skip
+  # with it). No-ops (resolve sha = github.sha) on PRs and main pushes,
   # while a promotion PR is open (ladder pause), or on an existing bump head.
   bump:
     name: bump (patch ladder)
+    if: >-
+      !(github.event_name == 'push' && github.ref_name == 'nightly' &&
+        github.triggering_actor.login == 'carpenter-release-bot[bot]' &&
+        startsWith(github.event.head_commit.message, 'chore(release): bump'))
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
@@ -53,6 +64,15 @@ jobs:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
         if: steps.decide.outputs.run == 'true'
+      - name: create app token
+        uses: actions/create-github-app-token@v1
+        id: app
+        if: steps.decide.outputs.run == 'true'
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
       - name: pause while a promotion PR is open
         id: pause
         if: steps.decide.outputs.run == 'true'
@@ -67,6 +87,8 @@ jobs:
       - name: bump patch + regen + push
         id: do
         if: steps.decide.outputs.run == 'true' && steps.pause.outputs.paused != 'true'
+        env:
+          TOKEN: ${{ steps.app.outputs.token }}
         run: |
           set -eu
           if git log -1 --format=%s | grep -q '^chore(release): bump'; then
@@ -88,7 +110,7 @@ jobs:
             # fully-qualified refspecs: the repo has both a nightly branch and
             # a nightly release tag — a bare `nightly` dst is ambiguous and
             # git refuses the push.
-            if git pull --rebase origin refs/heads/nightly && git push origin HEAD:refs/heads/nightly; then
+            if git pull --rebase origin refs/heads/nightly && git push "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/nightly; then
               pushed=1
               break
             fi
@@ -271,9 +293,11 @@ jobs:
   # to the promotion merge so the trunk absorbs main's merge commit and the
   # ladder resumes at X.(Y+1).1. FF-only by construction — if nightly moved
   # in between, fail loudly and reconcile by merging main back via a PR.
-  # GITHUB_TOKEN on purpose: no workflow cascade, the next merge rolls the
-  # channel. Recreates nightly if it was deleted. Also runs on
-  # workflow_dispatch (main) to retry a failed recut without re-publishing.
+  # Pushes via the release-bot App token (ruleset bypass, adr/023); that push
+  # fires one nightly run whose bump job resumes the patch ladder immediately
+  # — its own bot-pushed bump commit is then cascade-suppressed by the bump
+  # job's `if`. Also runs on workflow_dispatch (main) to retry a failed recut
+  # without re-publishing.
   recut:
     name: recut nightly from main
     needs: release
@@ -290,10 +314,20 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: create app token
+        uses: actions/create-github-app-token@v1
+        id: app
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
       - name: fast-forward nightly to the promotion merge
+        env:
+          TOKEN: ${{ steps.app.outputs.token }}
         run: |
           set -eu
-          if git push origin "$GITHUB_SHA":refs/heads/nightly; then
+          if git push "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$GITHUB_SHA":refs/heads/nightly; then
             echo "::notice::nightly fast-forwarded to ${GITHUB_SHA::7}"
           else
             echo "::error::nightly moved since the promotion merge — reconcile (PR main into nightly), then workflow_dispatch this run on main"

@@ -163,16 +163,19 @@ into `nightly`, rolling the first prerelease).
 - **Merge green or don't merge**: ci.yml must pass on the branch head; rebase
   onto `nightly` before merging if it has moved. Delete the branch after merge.
 - **Branch protection** ([adr/023](docs/adr/023-ruleset-bypass-actors.md) —
-  rulesets-only, API-managed; no classic branch protection): `nightly` +
-  `main` each require a PR, code-owner review, and the checks (gates, build,
-  smoke lanes; strict/up-to-date), forbid force-pushes and deletions; `main`
+  rulesets-only; no classic branch protection): `nightly` + `main` each
+  require a PR, code-owner review, and the checks (gates, build, smoke
+  lanes; strict/up-to-date), forbid force-pushes and deletions; `main`
   additionally requires the `guard` job (only `nightly` merges into it).
   Bypass actors: the owner (`always` — so "green before merge" is policy,
   not mechanism; direct pushes stay reserved for generated-surface fixes
-  like `howto.gen.md`/spec-table drift), `github-actions[bot]` (ladder
-  pushes), and the release-bot App (promote-bump). Nobody else can push or
-  merge either trunk. Don't re-save the nightly ruleset in the GitHub UI —
-  it would drop the bot bypass actor (adr/023).
+  like `howto.gen.md`/spec-table drift) and the release-bot App (all
+  ladder pushes: bump, promote-bump, recut — `GITHUB_TOKEN` pushes are
+  declined on user-owned repos, so the ladder pushes with the App token;
+  its would-be cascade runs are suppressed by the bump job's `if`). Nobody
+  else can push or merge either trunk. Even the owner's plain merge is
+  refused (sole code owner can't self-approve) — bypassing is explicit
+  (`gh pr merge --admin`).
 
 ## Dev authoring loop (`--dev`)
 Two build stages ([design/19](docs/design/19-dev-build.md),
