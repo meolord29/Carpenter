@@ -272,14 +272,24 @@ jobs:
   # ladder resumes at X.(Y+1).1. FF-only by construction — if nightly moved
   # in between, fail loudly and reconcile by merging main back via a PR.
   # GITHUB_TOKEN on purpose: no workflow cascade, the next merge rolls the
-  # channel. Recreates nightly if it was deleted.
+  # channel. Recreates nightly if it was deleted. Also runs on
+  # workflow_dispatch (main) to retry a failed recut without re-publishing.
   recut:
     name: recut nightly from main
     needs: release
-    if: github.event_name == 'push' && github.ref_name == 'main' && needs.release.result == 'success'
+    if: >-
+      github.ref_name == 'main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
+      # full history: a depth-1 checkout cannot negotiate a push of a merge
+      # commit whose parents it never fetched — the server rejects a valid
+      # fast-forward with "fetch first" (that is exactly how the first live
+      # recut failed while nightly was main's own second parent).
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: fast-forward nightly to the promotion merge
         run: |
           set -eu
