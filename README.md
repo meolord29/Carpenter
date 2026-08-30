@@ -5,10 +5,11 @@ A tool your AI coding agent uses to build and grade Python practice courses.
 <p align="center"><img src="assets/logo.png" alt="carpenter logo" width="360"></p>
 
 You tell the agent what you want to learn — ideally a real problem you have,
-like "clean up my lab's CSV exports". The agent drafts a course; you approve
-it; you practice in a normal Jupyter notebook. When you run your code,
-carpenter grades it instantly — a pass is a real pass, not the AI being
-agreeable.
+like "I'm sitting on marketing data but no idea how to use math and statistics
+to extract valuable insights — teach me the 20% that gets me 80% of the
+value". The agent drafts a course; you approve it; you practice in a normal
+Jupyter notebook. When you run your code, carpenter grades it instantly —
+a pass is a real pass, not the AI being agreeable.
 
 carpenter keeps track of what you keep failing at, so the agent keeps giving
 you exercises on those spots until they clear. No special environment, no
