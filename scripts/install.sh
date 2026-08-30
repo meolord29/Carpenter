@@ -7,7 +7,7 @@
 # Channels (adr/021): this stock script follows `nightly`; the stable release
 # attaches a tag-patched copy (TAG="vX.Y.Z"), and /releases/latest/download/
 # serves the newest stable one. End users get stable via the README one-liner;
-# nightly is the dev/canary path documented in DEV.md.
+# nightly is the dev/canary path documented in docs/README.md.
 #
 # Test overrides (used by local verification, harmless to ignore):
 #   CARPENTER_DOWNLOAD_BASE  base URL replacing the GitHub release dir

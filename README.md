@@ -58,10 +58,11 @@ register manually:
 carpenter register --app opencode      # or: claude-code
 ```
 
-## Learn more
+## Contributing
 
-- [DEV.md](DEV.md) — building and contributing to carpenter.
-- `carpenter howto` — the full command manual.
+Everything for working on carpenter — docs map, dev loop, release channels —
+lives in [docs/README.md](docs/README.md). `carpenter howto` prints the full
+command manual.
 
 ## License
 
