@@ -112,11 +112,17 @@ CI (`.github/workflows/ci.yml`) mirrors these gates on an
 [design/17](docs/design/17-cross-platform.md),
 [adr/012](docs/adr/012-cross-platform-paths.md)) — `rust-toolchain.toml`
 pins stable and `uv` is installed. Releases (`.github/workflows/release.yml`)
-are branch-governed channels ([adr/021](docs/adr/021-nightly-main-channels.md)):
-feature PRs target `nightly`; every push to `nightly` rolls the rolling
-`nightly` prerelease (canary), and a `nightly → main` promotion publishes an
-immutable stable `vX.Y.Z` (version bumped in the promotion PR; marked Latest).
-ci.yml's `guard` job fails any PR into `main` whose head is not `nightly`. Each
+are branch-governed channels ([adr/021](docs/adr/021-nightly-main-channels.md))
+with an automated version ladder ([adr/022](docs/adr/022-automated-version-ladder.md)):
+feature PRs target `nightly`; every merge into `nightly` bumps a patch (the
+`bump` job commits it, then the run rolls the rolling `nightly` prerelease at
+the bumped sha), and a `nightly → main` promotion publishes an immutable
+stable `vX.Y.0` — the release-bot App lands main's minor+1 on PR open (patch
+ladder pauses meanwhile), a `recut` job fast-forwards `nightly` to the
+promotion merge after publishing. Versions are never bumped by hand below
+major (`cargo xtask bump` is the one mechanical step). ci.yml's `guard` job
+fails any PR into `main` whose head is not `nightly` or whose version is not
+exactly main's minor+1. Each
 publish ships `x86_64-unknown-linux-musl` + `aarch64-apple-darwin` tarballs,
 `SHA256SUMS`, and a channel-correct `scripts/install.sh` (stable's is
 tag-patched so it can never fetch nightly bits; the `curl | sh` one-liner
@@ -133,13 +139,15 @@ fetches the Latest stable release — checksum-verified via the same pipeline �
 and refreshes registered apps' skills; `--channel nightly` opts into the canary
 (adr/018, adr/021).
 
-## Integration & release (adr/021)
-`nightly` is the integration trunk: always green; every push rolls the rolling
-`nightly` prerelease. `main` is the frozen release branch — stable `vX.Y.Z`
-publishes only from a `nightly → main` promotion PR, and the `guard` check
-rejects every other PR into `main`. Bootstrap: `nightly` was cut from `main`
-HEAD when the model landed (adr/021's PR merged into `nightly`, rolling the
-first prerelease).
+## Integration & release (adr/021, adr/022)
+`nightly` is the integration trunk: always green; every merge bumps a patch
+and rolls the rolling `nightly` prerelease at the bumped sha (adr/022). `main`
+is the frozen release branch — stable `vX.Y.0` publishes only from a
+`nightly → main` promotion PR (the release-bot lands the minor bump; `guard`
+checks head == `nightly` and the exact version), and a `recut` job
+fast-forwards `nightly` to the promotion merge afterwards. Bootstrap:
+`nightly` was cut from `main` HEAD when the model landed (adr/021's PR merged
+into `nightly`, rolling the first prerelease).
 - **Short-lived branches only**: `ivan/<topic>`, target ≤1 day of work, one
   concern per branch. No long-lived branches — unfinished work lands dark
   behind the `dev` feature flag (adr/016) instead of aging on a branch. The one
