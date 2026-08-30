@@ -14,18 +14,37 @@ concurrency:
 
 jobs:
   # adr/021: `main` is the frozen release branch — the only branch that may
-  # merge into it is `nightly`. Fail any other PR targeting main.
+  # merge into it is `nightly`. Fail any other PR targeting main, and (adr/022)
+  # require the promotion to carry exactly main's minor+1 at patch 0 — the
+  # promote-bump bot lands it on PR open; this guard is the enforcement.
   guard:
     name: guard (only nightly merges into main)
     if: github.event_name == 'pull_request' && github.base_ref == 'main'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: assert head branch is nightly
         env:
           HEAD_REF: ${{ github.head_ref }}
         run: |
           if [ "$HEAD_REF" != "nightly" ]; then
             echo "::error::main only accepts merges from the nightly branch (adr/021); got '$HEAD_REF'"
+            exit 1
+          fi
+      - name: assert the promotion bumps minor exactly (adr/022)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -eu
+          ver() { git show "$1:Cargo.toml" | sed -n 's/^version = "\(.*\)"$/\1/p' | head -n1; }
+          base=$(ver "$BASE_SHA"); head=$(ver "$HEAD_SHA")
+          IFS='.' read -r bmaj bmin _ <<<"$base"
+          expected="${bmaj}.$((bmin+1)).0"
+          if [ "$head" != "$expected" ]; then
+            echo "::error::promotion must carry exactly ${expected} (main is ${base}); got ${head}. The promote-bump bot does this on PR open — reopen the PR if it was missing."
             exit 1
           fi
 
