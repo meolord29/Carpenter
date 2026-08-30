@@ -33,8 +33,8 @@ Rulesets only, one per trunk:
   merge is owner-approved), the 7 lane checks (strict), no force-pushes, no
   deletions.
 - **Bypass actors on `nightly`**: the owner (User 53997283, `always`) and
-  the **release-bot App** (`Integration` 4769844, `always`). All ladder
-  pushes — bump, promote-bump, recut — are made with the App token.
+  the release-bot App (`Integration` 4769844, `always`) — see the post-drill
+  revision: on a user-owned repo these cover human pushes only.
 - Classic branch protection on `main` deleted; the ruleset already carried
   the stricter settings. One source of truth per trunk.
 - **No-cascade by suppression, not token semantics.** App-token pushes fire
@@ -72,6 +72,19 @@ would-be cascade. Two documented behavior deltas:
    immediately at `X.(Y+1).1` (adr/022's own wording) instead of waiting
    for the next merge; that run's bump push is itself suppressed from
    cascading further.
+
+A second drill round (PR #34's merge run) falsified the App-token fix as
+well: ruleset evaluation attributes an App-token `git push` to the bot
+account (`carpenter-release-bot[bot]`), and bot accounts match neither the
+`Integration` bypass (4769844) nor a `User`-typed actor (322772521) — the
+push was declined identically. On user-owned repositories, bypass lists
+effectively cover **human users only** ("Actors may only be added to bypass
+lists when the repository belongs to an organization" — GitHub docs). The
+ladder's machine pushes therefore cannot bypass a check-gated ruleset on
+this repo shape; `bump` and `recut` pushes are declined and the ladder is
+broken until this ADR's mechanism is revised (org transfer, a
+human-identity token for the ladder, or weaker nightly rules). The
+owner-bypass merge path (`gh pr merge --admin`) works and is unaffected.
 
 ## Consequences
 
