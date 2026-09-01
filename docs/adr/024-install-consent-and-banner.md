@@ -27,10 +27,14 @@ byte-identical — `release.yml` seds it for stable releases):
   binary destination, per *detected* app the exact `SKILL.md` path plus the
   `opencode.json` permission merge, and PATH status. App detection moved ahead
   of consent (pure `command -v`, no side effects); register actions stay
-  post-install with their existing per-app y/N.
+  post-install with their per-app `[Y/n]` (Enter registers — registration is
+  the encouraged default; only `n` skips).
 - **Consent** — interactive (TTY + readable `/dev/tty`) →
-  `proceed with the install plan? [y/N]`; declining aborts exit 1 before
-  anything is downloaded. `CARPENTER_INSTALL_YES=1` skips the prompt.
+  `proceed with the install plan? [Y/n]`; Enter or any non-`n` answer
+  proceeds, only an explicit `n` declines — aborting exit 1 before anything is
+  downloaded. A dead tty (EOF on the read) also aborts: Enter means "a human
+  chose the default", EOF means "nobody is answering". `CARPENTER_INSTALL_YES=1`
+  skips the prompt.
   Non-interactive (CI smoke, `curl | sh` automation) prints the plan and
   proceeds — unattended lanes never hang.
 - **Palette** — the deck's `:root`: amber `#f0a63f` (wordmark, prompts, plan
@@ -44,9 +48,10 @@ byte-identical — `release.yml` seds it for stable releases):
 - **Tests** — `tests/install_sh.rs`: plan + non-interactive proceed;
   channel-correct banner (applies the release-time sed to a copy, asserts the
   `nightly` mark disappears — this also pins the sed anchor);
-  pty decline via `script(1)` (per-OS syntax; macOS `script` does not
-  propagate the child exit status, so assertions ride on output + filesystem
-  state). `ci.yml` runs `shellcheck scripts/install.sh` (Linux lane).
+  pty decline via `script(1)` (explicit `n` aborts; per-OS syntax — macOS
+  `script` does not propagate the child exit status, so assertions ride on
+  output + filesystem state) and pty Enter-defaults (Enter proceeds +
+  registers). `ci.yml` runs `shellcheck scripts/install.sh` (Linux lane).
 
 ## Consequences
 

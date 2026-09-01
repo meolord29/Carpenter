@@ -28,6 +28,10 @@ INSTALL_DIR="${CARPENTER_INSTALL_DIR:-${HOME}/.local/bin}"
 
 say() { printf '%scarpenter:%s %s\n' "$AMBER" "$RESET" "$1"; }
 die() { printf '%scarpenter: error:%s %s\n' "$BAD" "$RESET" "$1" >&2; exit 1; }
+abort_install() {
+    printf '%scarpenter: aborted%s — nothing was downloaded or installed\n' "$BAD" "$RESET" >&2
+    exit 1
+}
 
 # TTY-gated decoration (adr/024): empty off-TTY, so piped/CI output is plain.
 # Palette = the carpenter deck (`Goals/PPT/presentation.html` :root): amber
@@ -156,14 +160,10 @@ if { [ -t 1 ] || [ -t 2 ]; } && [ -r /dev/tty ]; then
 fi
 
 if [ "$interactive" = yes ] && [ "${CARPENTER_INSTALL_YES:-}" != "1" ]; then
-    printf '%scarpenter:%s proceed with the install plan? [y/N] ' "$AMBER" "$RESET" >&2
-    read -r answer </dev/tty || answer=''
+    printf '%scarpenter:%s proceed with the install plan? [Y/n] ' "$AMBER" "$RESET" >&2
+    read -r answer </dev/tty || abort_install
     case "$answer" in
-        y|Y|yes|YES|Yes) ;;
-        *)
-            printf '%scarpenter: aborted%s — nothing was downloaded or installed\n' "$BAD" "$RESET" >&2
-            exit 1
-            ;;
+        n|N|no|NO|No) abort_install ;;
     esac
 elif [ "$interactive" = no ]; then
     say "non-interactive — proceeding with the plan above"
@@ -197,12 +197,12 @@ install -m755 "${tmp}/carpenter" "${INSTALL_DIR}/carpenter" \
 # ask y/n per detected app, one by one. Non-interactive (CI, `curl | sh` under
 # automation): auto-register every detected app so unattended lanes never hang.
 # Prompts read /dev/tty — stdin carries the piped script under `curl | sh`.
-ask_register() { # $1 = app label → y/n from the user
-    printf '%scarpenter:%s register the skill for %s? [y/N] ' "$AMBER" "$RESET" "$1" >&2
+ask_register() { # $1 = app label → Y/n from the user (Enter registers)
+    printf '%scarpenter:%s register the skill for %s? [Y/n] ' "$AMBER" "$RESET" "$1" >&2
     read -r answer </dev/tty || return 1
     case "$answer" in
-        y|Y|yes|YES|Yes) return 0 ;;
-        *) return 1 ;;
+        n|N|no|NO|No) return 1 ;;
+        *) return 0 ;;
     esac
 }
 

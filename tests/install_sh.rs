@@ -215,7 +215,7 @@ fn install_sh_declined_consent_installs_nothing() {
     .replace('\r', "");
 
     assert!(
-        text.contains("proceed with the install plan?"),
+        text.contains("proceed with the install plan? [Y/n]"),
         "consent prompt must appear under a pty: {text}"
     );
     assert!(
@@ -232,6 +232,88 @@ fn install_sh_declined_consent_installs_nothing() {
     );
 
     let _ = std::fs::remove_dir_all(&root);
+}
+
+/// Enter takes the encouraged default at both prompts (adr/024 Y-defaults):
+/// consent proceeds, registration registers. End-to-end under a real pty.
+#[test]
+fn install_sh_enter_defaults_proceed_and_register() {
+    let Some(target) = platform_target() else {
+        return;
+    };
+    let has_script = Command::new("sh")
+        .arg("-c")
+        .arg("command -v script >/dev/null 2>&1")
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    if !has_script {
+        return; // no pty helper (unusual container); CI covers Linux + macOS
+    }
+    let fixture = release_fixture(target);
+    let root = setup("install-enter");
+    stub_opencode(&root);
+    let script = installer_script();
+    let bin_dir = root.join("bin");
+
+    let mut cmd = Command::new("script");
+    if cfg!(target_os = "macos") {
+        cmd.args(["-q", "/dev/null", "sh"]).arg(&script);
+    } else {
+        cmd.args(["-qec", &format!("sh {}", script.display()), "/dev/null"]);
+    }
+    let mut child = cmd
+        .env("HOME", &root)
+        .env("XDG_CONFIG_HOME", config_root(&root))
+        .env(
+            "CARPENTER_DOWNLOAD_BASE",
+            format!("file://{}", fixture.display()),
+        )
+        .env("CARPENTER_INSTALL_DIR", &bin_dir)
+        .env(
+            "PATH",
+            format!(
+                "{}:{}",
+                root.join("stub").display(),
+                std::env::var("PATH").unwrap_or_default()
+            ),
+        )
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    // Enter at the consent prompt, Enter at the register prompt
+    child.stdin.as_mut().unwrap().write_all(b"\n\n").unwrap();
+    let out = child.wait_with_output().unwrap();
+    let text = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    )
+    .replace('\r', "");
+
+    assert!(
+        text.contains("proceed with the install plan? [Y/n]"),
+        "consent prompt must appear under a pty: {text}"
+    );
+    assert!(
+        text.contains("register the skill for opencode? [Y/n]"),
+        "register prompt must appear under a pty: {text}"
+    );
+    assert!(
+        text.contains("registered in opencode (skill)"),
+        "Enter at the register prompt registers: {text}"
+    );
+    assert!(
+        bin_dir.join("carpenter").is_file(),
+        "Enter at the consent prompt installs the binary"
+    );
+    let (skill_md, _perms) = common::opencode_paths(&root);
+    assert!(skill_md.is_file(), "skill registered at {skill_md:?}");
+
+    let _ = std::fs::remove_dir_all(&root);
+    let _ = std::fs::remove_dir_all(&fixture);
 }
 
 /// A scratch dir for the tag-patched script copy (sibling cleanup in the test).
