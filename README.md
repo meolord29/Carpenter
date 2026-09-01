@@ -47,12 +47,16 @@ One line:
 curl -LsSf https://github.com/meolord29/Carpenter/releases/latest/download/install.sh | sh
 ```
 
-The binary lands in `~/.local/bin` (add it to `PATH` if the installer says so).
+The installer prints a branded banner and an install plan — download source,
+checksum, binary destination, which agent apps it would register the skill
+into — and asks `proceed?` before downloading anything (piped/CI runs proceed
+without hanging). Decline with `n` and nothing is touched. The binary lands in
+`~/.local/bin` (add it to `PATH` if the installer says so).
 Update later with `carpenter upgrade` (it also refreshes the skill).
 
-If `opencode` or `claude` is on your machine, the installer detects it and asks
-whether to register the carpenter skill (each app, one by one); you can also
-register manually:
+If `opencode` or `claude` is on your machine, the installer asks whether to
+register the carpenter skill (each app, one by one); you can also register
+manually:
 
 ```sh
 carpenter register --app opencode      # or: claude-code

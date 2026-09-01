@@ -30,3 +30,12 @@ skill removal (every registered app, each best-effort —
 the binary is deleted (safe while running on Linux/macOS). `NotFound` when
 neither skill nor binary exists. Config is kept unless `--purge-config`; course
 data is never touched.
+
+The `curl | sh` installer (`scripts/install.sh`) is the human-facing sibling of
+`upgrade`'s release pipeline: branded banner + install plan (download source,
+checksum, binary destination, per-app skill paths + permission merge, PATH
+status), explicit consent when a TTY is attached (declining aborts before any
+download), plan-and-proceed when not. Channel-correct by construction — the
+stable release attaches a tag-patched copy ([adr/021](../adr/021-nightly-main-channels.md))
+and the banner tagline follows `TAG`. Pinned by `tests/install_sh.rs`; see
+[adr/024](../adr/024-install-consent-and-banner.md).
