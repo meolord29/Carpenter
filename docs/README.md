@@ -1,6 +1,6 @@
 # carpenter docs
 
-Five areas. The **code is the source of truth**; these are the human-readable
+Six areas. The **code is the source of truth**; these are the human-readable
 mirrors plus the generated contracts. When code and docs disagree, the code wins
 — update the docs.
 
@@ -11,6 +11,7 @@ mirrors plus the generated contracts. When code and docs disagree, the code wins
 | [specs/](specs/) | per-command I/O contracts (tables generated from types, adr/008) | [01-envelope](specs/01-envelope.md) |
 | [adr/](adr/) | architecture decision records (append-only history) | [adr/README](adr/README.md) |
 | [examples/](examples/) | one worked example per CLI leaf — the howto's single source (adr/007) | any `<module>/<fn>.md` |
+| [presentations/](presentations/) | talk decks given about carpenter (dated, self-contained HTML) | [2026-08-31-ai-tinkers](presentations/2026-08-31-ai-tinkers.html) |
 
 ## Read order (newcomer)
 
