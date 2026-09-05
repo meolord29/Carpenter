@@ -62,6 +62,9 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - name: fmt
         run: cargo fmt --all -- --check
+      - name: shellcheck installer
+        if: runner.os == 'Linux'
+        run: shellcheck scripts/install.sh
       - name: clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: build (strict gates + doc regen)
