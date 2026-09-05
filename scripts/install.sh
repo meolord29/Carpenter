@@ -146,6 +146,7 @@ if on_path; then
     printf '  %spath%s      %s%s is on your PATH%s\n' \
         "$MUTED" "$RESET" "$CREAM" "$INSTALL_DIR" "$RESET"
 else
+    # shellcheck disable=SC2016  # $PATH prints literally — it's the hint's text
     printf '  %spath%s      %s%s is not on your PATH — after install: export PATH="%s:$PATH"%s\n' \
         "$MUTED" "$RESET" "$CREAM" "$INSTALL_DIR" "$INSTALL_DIR" "$RESET"
 fi
@@ -240,6 +241,7 @@ ver=$("${INSTALL_DIR}/carpenter" --version 2>/dev/null || echo carpenter)
 printf '%s✓%s %sinstalled %s -> %s/carpenter%s\n' \
     "$GOOD" "$RESET" "$CREAM" "$ver" "$INSTALL_DIR" "$RESET"
 if ! on_path; then
+    # shellcheck disable=SC2016  # $PATH prints literally — it's the hint's text
     printf '%s!%s %s%s is not on PATH; add it: export PATH="%s:$PATH"%s\n' \
         "$HONEY" "$RESET" "$CREAM" "$INSTALL_DIR" "$INSTALL_DIR" "$RESET"
 fi
